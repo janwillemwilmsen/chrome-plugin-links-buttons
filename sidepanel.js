@@ -78,7 +78,7 @@ function renderResults(items) {
     return;
   }
   results.innerHTML = '';
-  items.forEach(item => {
+  items.forEach((item, idx) => {
     const div = document.createElement('div');
     div.className = 'item';
     div.innerHTML = `
@@ -86,7 +86,34 @@ function renderResults(items) {
       <span class="text">${item.text || '(no text)'}</span><br>
       ${item.linkUrl ? `<span class="url">${item.linkUrl}</span><br>` : ''}
       ${item.images.map(img => img.type === 'img' ? `<img class="image-preview" src="${img.src}" alt="${img.alt}" title="${img.title}">` : '<span class="type">[svg]</span>').join(' ')}
+      <br>
+      <button class="scroll-btn" data-idx="${idx}">Scroll To</button>
+      <button class="html-btn" data-idx="${idx}">Show HTML</button>
+      <div class="popover" style="display:none;position:absolute;z-index:9999;background:#fff;border:1px solid #ccc;padding:0.5em;max-width:400px;max-height:300px;overflow:auto;"></div>
     `;
+    // Scroll To button logic
+    div.querySelector('.scroll-btn').onclick = async (e) => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      chrome.tabs.sendMessage(tab.id, { action: 'scroll-to-element', index: idx });
+    };
+    // Show HTML button logic
+    div.querySelector('.html-btn').onclick = async (e) => {
+      const popover = div.querySelector('.popover');
+      if (popover.style.display === 'block') {
+        popover.style.display = 'none';
+        return;
+      }
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      chrome.tabs.sendMessage(tab.id, { action: 'get-element-html', index: idx }, (response) => {
+        if (response && response.html) {
+          popover.innerText = response.html;
+          popover.style.display = 'block';
+        } else {
+          popover.innerText = 'Unable to fetch HTML.';
+          popover.style.display = 'block';
+        }
+      });
+    };
     results.appendChild(div);
   });
 }

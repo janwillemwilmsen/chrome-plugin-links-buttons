@@ -71,11 +71,13 @@ function isLinkOrButton(el) {
 }
 
 // Listen for message from side panel to gather links/buttons
+let __lastFilteredElements = [];
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request && request.action === 'get-links-buttons') {
     try {
       const all = getAllElements();
       const filtered = all.filter(isLinkOrButton);
+      __lastFilteredElements = filtered;
       const items = filtered.map(extractElementData);
       sendResponse({ success: true, items });
     } catch (e) {
@@ -83,4 +85,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true; // async
   }
+  if (request && request.action === 'scroll-to-element' && typeof request.index === 'number') {
+    const el = __lastFilteredElements[request.index];
+    if (el && el.scrollIntoView) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('links-buttons-highlight');
+      setTimeout(() => el.classList.remove('links-buttons-highlight'), 2000);
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false });
+    }
+    return true;
+  }
+  if (request && request.action === 'get-element-html' && typeof request.index === 'number') {
+    const el = __lastFilteredElements[request.index];
+    if (el) {
+      sendResponse({ success: true, html: el.outerHTML });
+    } else {
+      sendResponse({ success: false });
+    }
+    return true;
+  }
 });
+
+// Add highlight CSS for scroll-to-element
+(function() {
+  const style = document.createElement('style');
+  style.textContent = `.links-buttons-highlight { outline: 3px solid #4285f4 !important; background: #e3f0fd !important; transition: outline 0.3s; }`;
+  document.head.appendChild(style);
+})();
