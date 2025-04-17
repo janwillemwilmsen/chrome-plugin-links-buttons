@@ -320,6 +320,10 @@ async function checkAriaHiddenIsTrue(elementHandle, depth = 0) {
 
     // Recursively check the parent element
     return checkAriaHiddenIsTrue(parentElement, depth + 1);
+}function checkAriaHiddenIsTrue(el, depth = 0) {
+  if (!el || depth > 10) return false;
+  if (el.getAttribute && el.getAttribute('aria-hidden') === 'true') return true;
+  return checkAriaHiddenIsTrue(el.parentElement, depth + 1);
 }
 
 

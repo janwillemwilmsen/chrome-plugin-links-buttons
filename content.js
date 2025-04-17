@@ -69,6 +69,49 @@ function extractElementData(el) {
   if (el.shadowRoot && el.shadowRoot.textContent) {
     slotContent = el.shadowRoot.textContent.trim();
   }
+  // Robustly detect if opens in new window (align with playwrightcode.js logic)
+  let opensInNewWindow = false;
+  if (tag === 'a') {
+    opensInNewWindow = el.getAttribute('target') === '_blank';
+  } else if (tag === 'button' || role === 'button') {
+    // Check inline onclick attribute
+    let handler = el.getAttribute('onclick');
+    if (handler && handler.includes('window.open')) {
+      opensInNewWindow = true;
+    }
+    // Check attached JS handler
+    else if (typeof el.onclick === 'function' && el.onclick.toString().includes('window.open')) {
+      opensInNewWindow = true;
+    }
+    // Check for any attribute containing window.open
+    else {
+      for (let i = 0; i < el.attributes.length; i++) {
+        if (el.attributes[i].value && el.attributes[i].value.includes('window.open')) {
+          opensInNewWindow = true;
+          break;
+        }
+      }
+    }
+    // Recursively check children for onclick="window.open"
+    function checkChildrenForWindowOpen(element) {
+      if (!element || !element.children) return false;
+      for (let i = 0; i < element.children.length; i++) {
+        let child = element.children[i];
+        let childHandler = child.getAttribute && child.getAttribute('onclick');
+        if (childHandler && childHandler.includes('window.open')) {
+          return true;
+        }
+        if (checkChildrenForWindowOpen(child)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    if (!opensInNewWindow && checkChildrenForWindowOpen(el)) {
+      opensInNewWindow = true;
+    }
+  }
+
   // Find ancestor link
   function findAncestorLink(e, depth = 0) {
     if (!e || depth > 10) return null;
@@ -135,7 +178,9 @@ function extractElementData(el) {
   let outerHTML = el.outerHTML;
   return {
     tag, id, className, role, ariaHidden, ariaLabel, ariaLabelledBy, ariaLabelledByText, ariaDescribedBy, ariaDescribedByText,
-    linkUrl, text, slotContent, slots, hasShadowDom, ancestorLink, inFigureWithFigcaption, rolePresentation, outerHTML, images
+    linkUrl, text, slotContent, slots, hasShadowDom, ancestorLink, inFigureWithFigcaption, rolePresentation, outerHTML, images,
+    opensInNewWindow,
+    title: el.getAttribute && el.getAttribute('title')
   };
 }
 
