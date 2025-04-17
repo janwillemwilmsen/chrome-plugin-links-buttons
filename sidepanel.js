@@ -82,10 +82,18 @@ function renderResults(items) {
     const div = document.createElement('div');
     div.className = 'item';
     div.innerHTML = `
-      <span class="type">[${item.type}]</span>
+      <span class="type">[${item.tag}]</span>
       <span class="text">${item.text || '(no text)'}</span><br>
       ${item.linkUrl ? `<span class="url">${item.linkUrl}</span><br>` : ''}
-      ${item.images.map(img => img.type === 'img' ? `<img class="image-preview" src="${img.src}" alt="${img.alt}" title="${img.title}">` : '<span class="type">[svg]</span>').join(' ')}
+      <span class="meta">ID: <b>${item.id || '-'}</b> | Class: <b>${item.className || '-'}</b> | Role: <b>${item.role || '-'}</b></span><br>
+      <span class="meta">aria-hidden: <b>${item.ariaHidden ? 'true' : 'false'}</b> | aria-label: <b>${item.ariaLabel || '-'}</b></span><br>
+      <span class="meta">aria-labelledby: <b>${item.ariaLabelledBy || '-'}</b> <em>${item.ariaLabelledByText ? '(' + item.ariaLabelledByText + ')' : ''}</em></span><br>
+      <span class="meta">aria-describedby: <b>${item.ariaDescribedBy || '-'}</b> <em>${item.ariaDescribedByText ? '(' + item.ariaDescribedByText + ')' : ''}</em></span><br>
+      ${item.ancestorLink ? `<span class="meta">Ancestor Link: <a href="${item.ancestorLink}" target="_blank">${item.ancestorLink}</a></span><br>` : ''}
+      ${item.inFigureWithFigcaption ? `<span class="meta">In Figure with Figcaption</span><br>` : ''}
+      ${item.hasShadowDom ? `<span class="meta">Has Shadow DOM</span><br>` : ''}
+      ${item.slotContent ? `<span class="meta">Slot Content: <b>${item.slotContent}</b></span><br>` : ''}
+      ${item.images && item.images.length ? `<span class="meta">Images/SVGs:<ul style='font-size:0.9em;overflow-x:auto;'>$${item.images.map(img => `<li>type: ${img.type} ${img.type === 'img' ? `src: ${img.src} alt: ${img.alt}` : ''} ${img.type === 'svg' ? `role: ${img.role || '-'} title: ${img.title || '-'} desc: ${img.desc || '-'} aria-label: ${img.ariaLabel || '-'} ...` : ''}</li>`).join('')}</ul></span>` : ''}
       <br>
       <button class="scroll-btn" data-idx="${idx}">Scroll To</button>
       <button class="html-btn" data-idx="${idx}">Show HTML</button>
