@@ -71,65 +71,7 @@ function unique(arr) {
   return Array.from(new Set(arr));
 }
 
-function renderResults(items) {
-  const results = document.getElementById('results');
-  if (!items.length) {
-    results.innerHTML = '<em>No links or buttons found.</em>';
-    return;
-  }
-  results.innerHTML = '';
-  let linkId = 1;
-let buttonId = 1;
-let imageId = 1;
-items.forEach((item, idx) => {
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.innerHTML = `
-      <span class="type">[${item.tag}]</span>
-      <span class="text">${item.text || '(no text)'}</span><br>
-      ${item.linkUrl ? `<span class="url">${item.linkUrl}</span><br>` : ''}
-      <span class="meta">ID: <b>${item.id || '-'}</b> | Class: <b>${item.className || '-'}</b> | Role: <b>${item.role || '-'}</b></span><br>
-<span class="meta">Title: <b>${item.title || '-'}</b></span><br>
-      <span class="meta">aria-hidden: <b>${item.ariaHidden ? 'true' : 'false'}</b> | aria-label: <b>${item.ariaLabel || '-'}</b></span><br>
-      <span class="meta">aria-labelledby: <b>${item.ariaLabelledBy || '-'}</b> <em>${item.ariaLabelledByText ? '(' + item.ariaLabelledByText + ')' : ''}</em></span><br>
-      <span class="meta">aria-describedby: <b>${item.ariaDescribedBy || '-'}</b> <em>${item.ariaDescribedByText ? '(' + item.ariaDescribedByText + ')' : ''}</em></span><br>
-      ${item.ancestorLink ? `<span class="meta">Ancestor Link: <a href="${item.ancestorLink}" target="_blank">${item.ancestorLink}</a></span><br>` : ''}
-      ${item.inFigureWithFigcaption ? `<span class="meta">In Figure with Figcaption</span><br>` : ''}
-      ${item.hasShadowDom ? `<span class=\"meta\">Has Shadow DOM</span><br>` : ''}
-      ${item.slotContent ? `<span class=\"meta\">Slot Content: <b>${item.slotContent}</b></span><br>` : ''}
-      <span class=\"meta\">Opens in New Window: <b>${item.opensInNewWindow ? 'Yes' : 'No'}</b></span><br>
-      ${item.images && item.images.length ? `<span class="meta">Images/SVGs:<ul style='font-size:0.9em;overflow-x:auto;'>$${item.images.map(img => `<li>type: ${img.type} ${img.type === 'img' ? `src: ${img.src} alt: ${img.alt}` : ''} ${img.type === 'svg' ? `role: ${img.role || '-'} title: ${img.title || '-'} desc: ${img.desc || '-'} aria-label: ${img.ariaLabel || '-'} ...` : ''}</li>`).join('')}</ul></span>` : ''}
-      <br>
-      <button class="scroll-btn" data-idx="${idx}">Scroll To</button>
-      <button class="html-btn" data-idx="${idx}">Show HTML</button>
-      <div class="popover" style="display:none;position:absolute;z-index:9999;background:#fff;border:1px solid #ccc;padding:0.5em;max-width:400px;max-height:300px;overflow:auto;"></div>
-    `;
-    // Scroll To button logic
-    div.querySelector('.scroll-btn').onclick = async (e) => {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      chrome.tabs.sendMessage(tab.id, { action: 'scroll-to-element', index: idx });
-    };
-    // Show HTML button logic
-    div.querySelector('.html-btn').onclick = async (e) => {
-      const popover = div.querySelector('.popover');
-      if (popover.style.display === 'block') {
-        popover.style.display = 'none';
-        return;
-      }
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      chrome.tabs.sendMessage(tab.id, { action: 'get-element-html', index: idx }, (response) => {
-        if (response && response.html) {
-          popover.innerText = response.html;
-          popover.style.display = 'block';
-        } else {
-          popover.innerText = 'Unable to fetch HTML.';
-          popover.style.display = 'block';
-        }
-      });
-    };
-    results.appendChild(div);
-  });
-}
+
 
 async function gatherLinksAndButtons() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -211,9 +153,9 @@ function renderResults(items) {
   }
   let html = '<ul id="results-list" style="padding-left:0;list-style:none;">';
   let linkId = 1;
-let buttonId = 1;
-let imageId = 1;
-items.forEach((item, idx) => {
+  let buttonId = 1;
+  let imageId = 1;
+  items.forEach((item, idx) => {
     // Compute filter fields
     const isButton = item.tag === 'button' || item.role === 'button';
     const haslinkTxtR = !!(item.text && item.text.trim());
