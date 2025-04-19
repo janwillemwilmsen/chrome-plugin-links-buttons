@@ -137,12 +137,10 @@ function renderResults(items) {
     return;
   }
   let html = '<ul id="results-list" style="padding-left:0;list-style:none;">';
-  let linkId = 1;
-  let buttonId = 1;
   let imageId = 1;
   items.forEach((item, idx) => {
     // Compute filter fields
-    const isButton = item.tag === 'button' || item.role === 'button';
+    const isButton = !!item.isButton;
     const haslinkTxtR = !!(item.text && item.text.trim());
     const imageInLink = item.images && item.images.length > 0;
     const ariaElement = !!(item.ariaLabel || item.ariaLabelledBy || item.ariaDescribedBy);
@@ -150,17 +148,12 @@ function renderResults(items) {
     const hasTabindex = typeof item.tabindex !== 'undefined' && item.tabindex !== null;
     const opensInNewWindow = !!item.opensInNewWindow;
     // Assign separate sequential IDs for links and buttons
-    let idLabel = '';
-    if (isButton) {
-      item._buttonId = buttonId++;
-      idLabel = `<span class=\"meta\"><b>Button ID: ${item._buttonId}</b></span><br>`;
-    } else {
-      item._linkId = linkId++;
-      idLabel = `<span class=\"meta\"><b>Link ID: ${item._linkId}</b></span><br>`;
-    }
+    const idLabel = isButton ? 
+      `<span class="meta"><b>Button ID: ${item.sequentialId}</b></span><br>` : 
+      `<span class="meta"><b>Link ID: ${item.sequentialId}</b></span><br>`;
     html += `
     <pre>${JSON.stringify(item, null, 2)}</pre>
-    <li class=\"item\" data-isbutton=\"${isButton}\" data-haslinktxtr=\"${haslinkTxtR}\" data-imageinlink=\"${imageInLink}\" data-ariaelement=\"${ariaElement}\" data-hastitleattribute=\"${hastitleAttribute}\" data-hastabindex=\"${hasTabindex}\" data-opensinnewwindow=\"${opensInNewWindow}\">\n      ${idLabel}
+    <li class="item" data-isbutton="${isButton}" data-haslinktxtr="${haslinkTxtR}" data-imageinlink="${imageInLink}" data-ariaelement="${ariaElement}" data-hastitleattribute="${hastitleAttribute}" data-hastabindex="${hasTabindex}" data-opensinnewwindow="${opensInNewWindow}\">\n      ${idLabel}
       <span class="type">[${item.tag}]</span>
       <span class="text">${item.text || '(no text)'}</span><br>
       ${item.linkUrl ? `<span class="url">${item.linkUrl}</span><br>` : ''}
@@ -168,7 +161,7 @@ function renderResults(items) {
       ${item.className ? `<span class="meta">Class: <b>${item.className}</b></span><br>` : ''}
       ${item.role ? `<span class="meta">Role: <b>${item.role}</b></span><br>` : ''}
       ${item.title ? `<span class="meta">Title: <b>${item.title}</b></span><br>` : ''}
-      ${item.ariaHidden ? `<span class="meta">aria-hidden: <b>${item.ariaHidden ? 'true' : 'false'}</b></span><br>` : ''}
+      ${item.ariaHidden ? `<span class="meta">aria-hidden: <b>${item.ariaHidden}</b></span><br>` : ''}
       ${item.ariaLabel ? `<span class="meta">aria-label: <b>${item.ariaLabel}</b></span><br>` : ''}
       ${item.ariaLabelledBy ? `<span class="meta">aria-labelledby: <b>${item.ariaLabelledBy}</b> <em>${item.ariaLabelledByText ? '(' + item.ariaLabelledByText + ')' : ''}</em></span><br>` : ''}
       ${item.ariaDescribedBy ? `<span class="meta">aria-describedby: <b>${item.ariaDescribedBy}</b> <em>${item.ariaDescribedByText ? '(' + item.ariaDescribedByText + ')' : ''}</em></span><br>` : ''}
@@ -205,7 +198,6 @@ function renderResults(items) {
             <img src="${img.previewSrc}" alt="Preview" class="img-preview" title="${img.altStatus || ''}">
             <div class="img-data">
                 ${detailsHtml}
-                Summary: ${img.altStatus || 'N/A'}<br>
                 ${img.isAriaHidden ? `<i>Is Aria-Hidden</i><br>` : ''}
                 ${img.figureInfo && img.figureInfo.inFigureElement ? `<i>In Figure (Caption: ${truncateString(img.figureInfo.captionText, 30) || 'none'})</i><br>` : ''}
             </div>
@@ -257,15 +249,15 @@ function truncateString(str, len) {
     return str.substring(0, len) + '...';
 }
 
-// Helper function to render alt status based on attributes
+// Helper function to render alt status based on attributes for IMG tags
 function renderAltStatus(img) {
     if (!img.hasAltAttribute) {
-        return 'Missing';
+        return '<span style="color: red;">Missing alt attribute</span>';
     } else if (img.isEmptyAlt) {
-        return 'Empty (<code>alt=""</code>)';
+        return '<span style="color: orange;">Empty (<code>alt=""</code>)</span>';
     } else {
-        // Use truncateString for potentially long alt text
-        return `"${truncateString(img.alt, 50)}"`;
+        // Display the actual alt text, truncated
+        return `"${truncateString(img.alt, 50)}"`; 
     }
 }
 

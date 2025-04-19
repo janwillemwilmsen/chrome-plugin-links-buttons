@@ -1059,19 +1059,6 @@ async function analyzeSingleImage(el) {
     let effectiveLabel = isSvg ? (ariaLabel || labelledByText || svgTitleDesc || titleAttr) :
       (altAttr || ariaLabel || labelledByText || titleAttr);
     
-    let altStatus = 'Unknown';
-    if (isSvg) {
-      const isDecorative = (role === 'presentation' || role === 'none' || isAriaHidden);
-      altStatus = effectiveLabel ? `Accessible Name: ${effectiveLabel}` :
-        isDecorative ? 'Decorative SVG' :
-        'Missing accessible name';
-
-    } else {
-      altStatus = !hasAltAttribute ? 'Missing alt attribute' :
-        isEmptyAlt ? 'Empty alt attribute' :
-        `Alt: ${altAttr}`;
-    }
-
     results.push({
       id: id,
       type: tagName,
@@ -1084,7 +1071,6 @@ async function analyzeSingleImage(el) {
       previewSrc: previewSrc,
       backgroundImageUrls: backgroundImageData.filter(bg => !bg.pseudo).map(bg => bg.url),
       outerHTML: originalOuterHTML,
-      altStatus: altStatus,
       alt: altAttr,
       isEmptyAlt: isEmptyAlt,
       hasAltAttribute: hasAltAttribute,

@@ -6,9 +6,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         const all = getAllElements();
         const filtered = all.filter(isLinkOrButton);
-        __lastFilteredElements = filtered;
+        __lastFilteredElements = filtered; 
+
+        let linkCounter = 1;
+        let buttonCounter = 1;
+        const itemsPromises = filtered.map(el => {
+          const isButton = el.tagName.toLowerCase() === 'button' || el.getAttribute('role') === 'button';
+          const sequentialId = isButton ? buttonCounter++ : linkCounter++;
+          return extractElementData(el, sequentialId, isButton); // Pass sequentialId and isButton flag
+        });
+
         // Use Promise.all to wait for all async calls to extractElementData
-        const items = await Promise.all(filtered.map(extractElementData));
+        const items = await Promise.all(itemsPromises);
         console.log('[ContentScript] Sending items:', items);
         sendResponse({ success: true, items });
       } catch (e) {
@@ -65,7 +74,7 @@ function getAllElements(root = document) {
   return elements;
 }
 
-async function extractElementData(el) {
+async function extractElementData(el, sequentialId, isButton) { 
   if (!el || !el.tagName) return { type: '', linkUrl: '', text: '', slotContent: '', images: [] };
   let tag = el.tagName.toLowerCase();
   let id = el.id || '';
@@ -181,17 +190,25 @@ async function extractElementData(el) {
                 const formattedImage = {
                     id: imgData.id,
                     type: imgData.type, // e.g., 'img', 'svg', 'background-before'
+                    isSvg: imgData.isSvg, // Pass through SVG flag
+                    isImg: imgData.isImg, // Pass through Img flag
+                    isBackgroundImage: imgData.isBackgroundImage, // Pass through background flag
+                    pseudoElement: imgData.pseudoElement, // Pass through pseudo-element
                     src: imgData.previewSrc || imgData.originalUrl, // Use preview if available
+                    originalUrl: imgData.originalUrl, // Keep original URL too
+                    previewSrc: imgData.previewSrc, // Keep preview src
                     alt: imgData.alt, // Raw alt attribute text (null if not img)
                     title: imgData.title, // Raw title attribute text
                     svgTitleDesc: imgData.svgTitleDesc, // Combined title/desc from SVG <title>/<desc>
                     outerHTML: imgData.outerHTML, // outerHTML of the original analyzed element (img/svg/div)
-                    altStatus: imgData.altStatus || 'Status Unknown', // Descriptive status
                     isAriaHidden: imgData.isAriaHidden,
                     isEmptyAlt: imgData.isEmptyAlt,
                     hasAltAttribute: imgData.hasAltAttribute,
                     role: imgData.role,
-                    // Add other fields if sidepanel needs them
+                    hasUseTag: imgData.hasUseTag, // Pass through use tag info
+                    useHref: imgData.useHref,
+                    absoluteUseHref: imgData.absoluteUseHref,
+                    figureInfo: imgData.figureInfo // Pass through figure info
                 };
                  // Add svgSource only if it's an SVG and has a preview source
                  if (imgData.isSvg && imgData.previewSrc) {
@@ -200,8 +217,8 @@ async function extractElementData(el) {
                 return formattedImage;
             });
 
-      } catch (imgError) {
-        console.error('[ContentScript] Error processing image:', imgError);
+      } catch (error) {
+        console.error('[ContentScript] Error processing image:', error);
       }
     }
   } else if (el.querySelectorAll) {
@@ -222,10 +239,27 @@ async function extractElementData(el) {
   // Outer HTML
   let outerHTML = el.outerHTML;
   return {
-    tag, id, className, role, ariaHidden, ariaLabel, ariaLabelledBy, ariaLabelledByText, ariaDescribedBy, ariaDescribedByText,
-    linkUrl, text, slotContent, slots, hasShadowDom, ancestorLink, inFigureWithFigcaption, rolePresentation, outerHTML, images,
+    tag,
+    id,
+    className,
+    role,
+    ariaHidden,
+    ariaLabel,
+    ariaLabelledBy,
+    ariaLabelledByText,
+    ariaDescribedBy,
+    ariaDescribedByText,
+    linkUrl,
+    text,
+    slotContent,
     opensInNewWindow,
-    title: el.getAttribute && el.getAttribute('title')
+    ancestorLink,
+    inFigureWithFigcaption,
+    hasShadowDom,
+    slots: slots.map(n => n.textContent ? n.textContent.trim() : ''),
+    images,
+    sequentialId: sequentialId, // Include the sequential ID
+    isButton: isButton // Include the isButton flag (optional, but consistent)
   };
 }
 
