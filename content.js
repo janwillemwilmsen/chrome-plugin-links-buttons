@@ -4,7 +4,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Use an async IIFE to handle the async operation
     (async () => {
       try {
-        const all = getAllElements();
+        const all = getAllInteractiveElements();
         const filtered = all.filter(isLinkOrButton);
         __lastFilteredElements = filtered; 
 
@@ -51,27 +51,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return false;
 });
 
-// Content script: Listens for a message from the side panel, gathers all links/buttons (with shadow DOM), and sends the data back
+// Helper function to recursively find elements including those in shadow DOM
+function findAllElementsRecursive(selector, rootNode = document) {
+  let elements = Array.from(rootNode.querySelectorAll(selector));
+  const allNodes = rootNode.querySelectorAll('*'); // Get all nodes in the current root
 
-function getAllElements(root = document) {
-  let elements = [];
-  const treeWalker = document.createTreeWalker(
-    root,
-    NodeFilter.SHOW_ELEMENT,
-    null,
-    false
-  );
-  let node = treeWalker.currentNode;
-  while(node) {
-    if (node && node.nodeType === Node.ELEMENT_NODE) {
-      elements.push(node);
-      if (node.shadowRoot) {
-        elements = elements.concat(getAllElements(node.shadowRoot));
-      }
+  allNodes.forEach(node => {
+    if (node.shadowRoot) {
+      // Recursively search inside the shadow root of this node
+      elements = elements.concat(findAllElementsRecursive(selector, node.shadowRoot));
     }
-    node = treeWalker.nextNode();
-  }
+  });
+
   return elements;
+}
+
+// Use findAllElementsRecursive to find interactive elements
+function getAllInteractiveElements(root = document) {
+  const selector = 'a, button, [role="link"], [role="button"]';
+  return findAllElementsRecursive(selector, root);
 }
 
 async function extractElementData(el, sequentialId, isButton) { 
@@ -88,6 +86,7 @@ async function extractElementData(el, sequentialId, isButton) {
   let ariaLabel = el.getAttribute && el.getAttribute('aria-label');
   let ariaLabelledBy = el.getAttribute && el.getAttribute('aria-labelledby');
   let ariaDescribedBy = el.getAttribute && el.getAttribute('aria-describedby');
+  let title = el.getAttribute ? (el.getAttribute('title') || '') : ''; // Extract title attribute
   function resolveAriaRefs(refStr) {
     if (!refStr) return '';
     return refStr.split(' ').map(id => {
@@ -172,9 +171,11 @@ async function extractElementData(el, sequentialId, isButton) {
   // Images/SVG info - Use analyzeSingleImage
   let images = [];
   // Check if analyzeSingleImage is available (from images.js)
-  if (el.querySelectorAll && typeof analyzeSingleImage === 'function') {
-    console.log('Using analyzeSingleImage to get images');
-    const imageElements = Array.from(el.querySelectorAll('img,svg'));
+  if (typeof analyzeSingleImage === 'function') { // Ensure analyzeSingleImage is loaded
+    console.log('Using analyzeSingleImage with Shadow DOM support to get images for element:', el);
+    // Use findAllElementsRecursive to find images/svg within the element (pierces shadow DOM)
+    const imageElements = findAllElementsRecursive('img,svg', el);
+
     if (imageElements.length > 0) {
       const imagePromises = imageElements.map(img => analyzeSingleImage(img));
       try {
@@ -251,6 +252,7 @@ async function extractElementData(el, sequentialId, isButton) {
     ariaDescribedByText,
     linkUrl,
     text,
+    title, // Include title in return object
     slotContent,
     opensInNewWindow,
     ancestorLink,
@@ -264,7 +266,7 @@ async function extractElementData(el, sequentialId, isButton) {
 }
 
 function gatherLinksAndButtons() {
-  const all = getAllElements();
+  const all = getAllInteractiveElements();
   const filtered = all.filter(isLinkOrButton);
   const items = filtered.map(extractElementData);
   chrome.runtime.sendMessage({ action: 'gathered', items });
@@ -272,13 +274,9 @@ function gatherLinksAndButtons() {
 
 function isLinkOrButton(el) {
   if (!el || !el.tagName) return false;
-  const type = el.tagName.toLowerCase();
-  if (type === 'a' || type === 'button') return true;
-  if (el.hasAttribute && el.hasAttribute('role')) {
-    const role = el.getAttribute('role');
-    if (role === 'link' || role === 'button') return true;
-  }
-  return false;
+  const tag = el.tagName.toLowerCase();
+  const role = el.getAttribute ? el.getAttribute('role') : null;
+  return tag === 'a' || tag === 'button' || role === 'link' || role === 'button';
 }
 
 // Add highlight CSS for scroll-to-element
