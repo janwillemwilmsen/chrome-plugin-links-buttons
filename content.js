@@ -1,20 +1,45 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request && request.action === 'get-links-buttons') {
     console.log('[ContentScript] Received get-links-buttons');
-    try {
-      const all = getAllElements();
-      const filtered = all.filter(isLinkOrButton);
-      __lastFilteredElements = filtered;
-      const items = filtered.map(extractElementData);
-      console.log('[ContentScript] Sending items:', items);
-      sendResponse({ success: true, items });
-    } catch (e) {
-      console.log('[ContentScript] Error:', e);
-      sendResponse({ success: false, error: e.message });
+    // Use an async IIFE to handle the async operation
+    (async () => {
+      try {
+        const all = getAllElements();
+        const filtered = all.filter(isLinkOrButton);
+        __lastFilteredElements = filtered;
+        // Use Promise.all to wait for all async calls to extractElementData
+        const items = await Promise.all(filtered.map(extractElementData));
+        console.log('[ContentScript] Sending items:', items);
+        sendResponse({ success: true, items });
+      } catch (e) {
+        console.error('[ContentScript] Error processing get-links-buttons:', e);
+        sendResponse({ success: false, error: e.message });
+      }
+    })(); // Immediately invoke the async function
+    return true; // Indicate asynchronous response
+  }
+  if (request && request.action === 'scroll-to-element' && typeof request.index === 'number') {
+    const el = __lastFilteredElements[request.index];
+    if (el && el.scrollIntoView) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('links-buttons-highlight');
+      setTimeout(() => el.classList.remove('links-buttons-highlight'), 2000);
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false });
     }
     return true;
   }
-  // ...rest unchanged
+  if (request && request.action === 'get-element-html' && typeof request.index === 'number') {
+    const el = __lastFilteredElements[request.index];
+    if (el) {
+      sendResponse({ success: true, html: el.outerHTML });
+    } else {
+      sendResponse({ success: false });
+    }
+    return true;
+  }
+  return false;
 });
 
 // Content script: Listens for a message from the side panel, gathers all links/buttons (with shadow DOM), and sends the data back
@@ -40,7 +65,7 @@ function getAllElements(root = document) {
   return elements;
 }
 
-function extractElementData(el) {
+async function extractElementData(el) {
   if (!el || !el.tagName) return { type: '', linkUrl: '', text: '', slotContent: '', images: [] };
   let tag = el.tagName.toLowerCase();
   let id = el.id || '';
@@ -135,45 +160,65 @@ function extractElementData(el) {
   if (el.tagName && el.tagName.toLowerCase() === 'slot') {
     slots = Array.from(el.assignedNodes ? el.assignedNodes() : []);
   }
-  // Images/SVG info
+  // Images/SVG info - Use analyzeSingleImage
   let images = [];
-  if (el.querySelectorAll) {
-    el.querySelectorAll('img,svg').forEach(img => {
-      if (img.tagName && img.tagName.toLowerCase() === 'img') {
-        images.push({
-          type: 'img',
-          src: img.src,
-          alt: img.getAttribute('alt'),
-          title: img.getAttribute('title'),
-          role: img.getAttribute('role'),
-          ancestorLink: findAncestorLink(img.parentElement),
-          inFigureWithFigcaption: isInFigureWithFigcaption(img.parentElement)
-        });
-      } else if (img.tagName && img.tagName.toLowerCase() === 'svg') {
-        // SVG accessibility: title, desc, aria-label, labelledby, describedby
-        let svgTitle = '';
-        let svgDesc = '';
-        let svgTitleElem = img.querySelector('title');
-        let svgDescElem = img.querySelector('desc');
-        if (svgTitleElem) svgTitle = svgTitleElem.textContent;
-        if (svgDescElem) svgDesc = svgDescElem.textContent;
-        images.push({
-          type: 'svg',
-          outerHTML: img.outerHTML,
-          ariaLabel: img.getAttribute('aria-label'),
-          ariaLabelledBy: img.getAttribute('aria-labelledby'),
-          ariaLabelledByText: resolveAriaRefs(img.getAttribute('aria-labelledby')),
-          ariaDescribedBy: img.getAttribute('aria-describedby'),
-          ariaDescribedByText: resolveAriaRefs(img.getAttribute('aria-describedby')),
-          title: svgTitle,
-          desc: svgDesc,
-          role: img.getAttribute('role')
-        });
+  // Check if analyzeSingleImage is available (from images.js)
+  if (el.querySelectorAll && typeof analyzeSingleImage === 'function') {
+    console.log('Using analyzeSingleImage to get images');
+    const imageElements = Array.from(el.querySelectorAll('img,svg'));
+    if (imageElements.length > 0) {
+      const imagePromises = imageElements.map(img => analyzeSingleImage(img));
+      try {
+        const imageResults = await Promise.all(imagePromises);
+        // analyzeSingleImage now returns an ARRAY of results, or an empty array []
+        // imageResults will be an array of arrays, e.g., [[imgData1], [], [svgData1, bgData1]]
+        // Flatten into a single array and filter out any potential null/undefined values
+        images = imageResults
+            .flat() // Makes it [imgData1, svgData1, bgData1]
+            .filter(Boolean) // Remove any nulls/undefined just in case
+            .map(imgData => {
+                // Map to the structure sidepanel.js expects
+                const formattedImage = {
+                    id: imgData.id,
+                    type: imgData.type, // e.g., 'img', 'svg', 'background-before'
+                    src: imgData.previewSrc || imgData.originalUrl, // Use preview if available
+                    alt: imgData.alt, // Raw alt attribute text (null if not img)
+                    title: imgData.title, // Raw title attribute text
+                    svgTitleDesc: imgData.svgTitleDesc, // Combined title/desc from SVG <title>/<desc>
+                    outerHTML: imgData.outerHTML, // outerHTML of the original analyzed element (img/svg/div)
+                    altStatus: imgData.altStatus || 'Status Unknown', // Descriptive status
+                    isAriaHidden: imgData.isAriaHidden,
+                    isEmptyAlt: imgData.isEmptyAlt,
+                    hasAltAttribute: imgData.hasAltAttribute,
+                    role: imgData.role,
+                    // Add other fields if sidepanel needs them
+                };
+                 // Add svgSource only if it's an SVG and has a preview source
+                 if (imgData.isSvg && imgData.previewSrc) {
+                    formattedImage.svgSource = imgData.previewSrc;
+                 }
+                return formattedImage;
+            });
+
+      } catch (imgError) {
+        console.error('[ContentScript] Error processing image:', imgError);
       }
-    });
+    }
+  } else if (el.querySelectorAll) {
+      console.warn('analyzeSingleImage function not found. Falling back to basic inline image analysis.');
+      // Fallback (original basic logic if images.js failed to load/define analyzeSingleImage)
+      el.querySelectorAll('img,svg').forEach(img => {
+        if (img.tagName && img.tagName.toLowerCase() === 'img') {
+            images.push({ type: 'img', src: img.src, alt: img.getAttribute('alt'), title: img.getAttribute('title') });
+        } else if (img.tagName && img.tagName.toLowerCase() === 'svg') {
+            let svgTitleElem = img.querySelector('title');
+            let svgDescElem = img.querySelector('desc');
+            images.push({ type: 'svg', outerHTML: img.outerHTML, title: svgTitleElem ? svgTitleElem.textContent : null, desc: svgDescElem ? svgDescElem.textContent: null });
+        }
+      });
   }
   // Presentation/none role for images
-  let rolePresentation = (el.tagName && el.tagName.toLowerCase() === 'img') ? (el.getAttribute('role') === 'presentation' || el.getAttribute('role') === 'none') : false;
+  let rolePresentation = (tag === 'img') ? (el.getAttribute('role') === 'presentation' || el.getAttribute('role') === 'none') : false;
   // Outer HTML
   let outerHTML = el.outerHTML;
   return {
@@ -201,44 +246,6 @@ function isLinkOrButton(el) {
   }
   return false;
 }
-
-// Listen for message from side panel to gather links/buttons
-let __lastFilteredElements = [];
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request && request.action === 'get-links-buttons') {
-    try {
-      const all = getAllElements();
-      const filtered = all.filter(isLinkOrButton);
-      __lastFilteredElements = filtered;
-      const items = filtered.map(extractElementData);
-      sendResponse({ success: true, items });
-    } catch (e) {
-      sendResponse({ success: false, error: e.message });
-    }
-    return true; // async
-  }
-  if (request && request.action === 'scroll-to-element' && typeof request.index === 'number') {
-    const el = __lastFilteredElements[request.index];
-    if (el && el.scrollIntoView) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('links-buttons-highlight');
-      setTimeout(() => el.classList.remove('links-buttons-highlight'), 2000);
-      sendResponse({ success: true });
-    } else {
-      sendResponse({ success: false });
-    }
-    return true;
-  }
-  if (request && request.action === 'get-element-html' && typeof request.index === 'number') {
-    const el = __lastFilteredElements[request.index];
-    if (el) {
-      sendResponse({ success: true, html: el.outerHTML });
-    } else {
-      sendResponse({ success: false });
-    }
-    return true;
-  }
-});
 
 // Add highlight CSS for scroll-to-element
 (function() {

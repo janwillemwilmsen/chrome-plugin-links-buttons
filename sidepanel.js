@@ -21,42 +21,7 @@ function getAllElements(root = document) {
   return elements;
 }
 
-// Helper to get text content, slot/shadow content, and image info
-function extractElementData(el) {
-  if (!el || !el.tagName) return { type: '', linkUrl: '', text: '', slotContent: '', images: [] };
-  let type = el.tagName.toLowerCase();
-  if (el.hasAttribute && el.hasAttribute('role')) type = el.getAttribute('role');
-  let linkUrl = el.href || (el.getAttribute && el.getAttribute('href')) || el.action || '';
-  let text = el.textContent ? el.textContent.trim() : '';
-
-  // Try to get slot content if present
-  let slotContent = '';
-  if (el.shadowRoot && el.shadowRoot.textContent) {
-    slotContent = el.shadowRoot.textContent.trim();
-  }
-
-  // Get images inside the element
-  let images = [];
-  if (el.querySelectorAll) {
-    el.querySelectorAll('img,svg').forEach(img => {
-      if (img.tagName && img.tagName.toLowerCase() === 'img') {
-        images.push({
-          type: 'img',
-          src: img.src,
-          alt: img.alt,
-          title: img.title
-        });
-      } else if (img.tagName && img.tagName.toLowerCase() === 'svg') {
-        images.push({
-          type: 'svg',
-          outerHTML: img.outerHTML
-        });
-      }
-    });
-  }
-
-  return { type, linkUrl, text, slotContent, images };
-}
+ 
 
 function isLinkOrButton(el) {
   if (!el) return false;
@@ -193,23 +158,58 @@ function renderResults(items) {
       item._linkId = linkId++;
       idLabel = `<span class=\"meta\"><b>Link ID: ${item._linkId}</b></span><br>`;
     }
-    html += `<li class=\"item\" data-isbutton=\"${isButton}\" data-haslinktxtr=\"${haslinkTxtR}\" data-imageinlink=\"${imageInLink}\" data-ariaelement=\"${ariaElement}\" data-hastitleattribute=\"${hastitleAttribute}\" data-hastabindex=\"${hasTabindex}\" data-opensinnewwindow=\"${opensInNewWindow}\">\n      ${idLabel}
+    html += `
+    <pre>${JSON.stringify(item, null, 2)}</pre>
+    <li class=\"item\" data-isbutton=\"${isButton}\" data-haslinktxtr=\"${haslinkTxtR}\" data-imageinlink=\"${imageInLink}\" data-ariaelement=\"${ariaElement}\" data-hastitleattribute=\"${hastitleAttribute}\" data-hastabindex=\"${hasTabindex}\" data-opensinnewwindow=\"${opensInNewWindow}\">\n      ${idLabel}
       <span class="type">[${item.tag}]</span>
       <span class="text">${item.text || '(no text)'}</span><br>
       ${item.linkUrl ? `<span class="url">${item.linkUrl}</span><br>` : ''}
-      <span class="meta">ID: <b>${item.id || '-'}</b> | Class: <b>${item.className || '-'}</b> | Role: <b>${item.role || '-'}</b></span><br>
-<span class="meta">Title: <b>${item.title || '-'}</b></span><br>
-      <span class="meta">aria-hidden: <b>${item.ariaHidden ? 'true' : 'false'}</b> | aria-label: <b>${item.ariaLabel || '-'}</b></span><br>
-      <span class="meta">aria-labelledby: <b>${item.ariaLabelledBy || '-'}</b> <em>${item.ariaLabelledByText ? '(' + item.ariaLabelledByText + ')' : ''}</em></span><br>
-      <span class="meta">aria-describedby: <b>${item.ariaDescribedBy || '-'}</b> <em>${item.ariaDescribedByText ? '(' + item.ariaDescribedByText + ')' : ''}</em></span><br>
+      ${item.id ? `<span class="meta">ID: <b>${item.id}</b></span><br>` : ''}
+      ${item.className ? `<span class="meta">Class: <b>${item.className}</b></span><br>` : ''}
+      ${item.role ? `<span class="meta">Role: <b>${item.role}</b></span><br>` : ''}
+      ${item.title ? `<span class="meta">Title: <b>${item.title}</b></span><br>` : ''}
+      ${item.ariaHidden ? `<span class="meta">aria-hidden: <b>${item.ariaHidden ? 'true' : 'false'}</b></span><br>` : ''}
+      ${item.ariaLabel ? `<span class="meta">aria-label: <b>${item.ariaLabel}</b></span><br>` : ''}
+      ${item.ariaLabelledBy ? `<span class="meta">aria-labelledby: <b>${item.ariaLabelledBy}</b> <em>${item.ariaLabelledByText ? '(' + item.ariaLabelledByText + ')' : ''}</em></span><br>` : ''}
+      ${item.ariaDescribedBy ? `<span class="meta">aria-describedby: <b>${item.ariaDescribedBy}</b> <em>${item.ariaDescribedByText ? '(' + item.ariaDescribedByText + ')' : ''}</em></span><br>` : ''}
       ${item.ancestorLink ? `<span class="meta">Ancestor Link: <a href="${item.ancestorLink}" target="_blank">${item.ancestorLink}</a></span><br>` : ''}
       ${item.inFigureWithFigcaption ? `<span class="meta">In Figure with Figcaption</span><br>` : ''}
       ${item.hasShadowDom ? `<span class=\"meta\">Has Shadow DOM</span><br>` : ''}
       ${item.slotContent ? `<span class=\"meta\">Slot Content: <b>${item.slotContent}</b></span><br>` : ''}
-      <span class=\"meta\">Opens in New Window: <b>${item.opensInNewWindow ? 'Yes' : 'No'}</b></span><br>
-      ${item.images && item.images.length ? `<span class="meta">Images/SVGs:<ul style='font-size:0.9em;overflow-x:auto;'>${item.images.map(img => {
-        img._imgId = imageId++;
-        return `<li><b>ImgID: ${img._imgId}</b> type: ${img.type} ${img.type === 'img' ? `src: ${img.src} alt: ${img.alt}` : ''} ${img.type === 'svg' ? `role: ${img.role || '-'} title: ${img.title || '-'} desc: ${img.desc || '-'} aria-label: ${img.ariaLabel || '-'} ...` : ''}</li>`;
+      ${item.opensInNewWindow ? `<span class="meta">Opens in New Window: <b>${item.opensInNewWindow}</b></span><br>` : ''}
+      ${item.images && item.images.length ? `<span class="meta">Images/SVGs:<ul class="image-details-list">${item.images.map(img => {
+        img._imgId = imageId++; // Assign a temporary ID for scrolling/inspection if needed
+
+        let detailsHtml = '';
+        if (img.type === 'img') {
+            detailsHtml = `
+                Src: <span class="img-src" title="${img.originalUrl || img.previewSrc || ''}">${truncateString(img.previewSrc || img.originalUrl, 60)}</span><br>
+                Alt: ${renderAltStatus(img)}
+            `;
+        } else if (img.type === 'svg') {
+            detailsHtml = `
+                Role: ${img.role || '-'} | Title Attr: ${img.title || '-'}<br>
+                SVG &lt;title&gt;/&lt;desc&gt;: ${truncateString(img.svgTitleDesc, 50) || '-'}<br>
+                Aria-Label: ${truncateString(img.ariaLabel, 50) || '-'}<br>
+                ${img.hasUseTag ? `Uses: <span title="${img.absoluteUseHref || img.useHref}">${truncateString(img.useHref, 40) || '-'}</span><br>` : ''}
+            `;
+        } else if (img.isBackgroundImage) {
+            detailsHtml = `
+                Source URL: <span class="img-src" title="${img.originalUrl || ''}">${truncateString(img.originalUrl, 60)}</span><br>
+                Applied to: ${img.pseudoElement || 'Element'}
+            `;
+        }
+
+        return `<li class="image-detail-item">
+            <b>ID: ${img._imgId}</b> | Type: <b>${img.type}${img.isBackgroundImage ? ` (${img.pseudoElement || 'bg'})` : ''}</b>
+            <img src="${img.previewSrc}" alt="Preview" class="img-preview" title="${img.altStatus || ''}">
+            <div class="img-data">
+                ${detailsHtml}
+                Summary: ${img.altStatus || 'N/A'}<br>
+                ${img.isAriaHidden ? `<i>Is Aria-Hidden</i><br>` : ''}
+                ${img.figureInfo && img.figureInfo.inFigureElement ? `<i>In Figure (Caption: ${truncateString(img.figureInfo.captionText, 30) || 'none'})</i><br>` : ''}
+            </div>
+        </li>`;
       }).join('')}</ul></span>` : ''}
       <br>
       <button class="scroll-btn" data-idx="${idx}">Scroll To</button>
@@ -250,6 +250,25 @@ function renderResults(items) {
   filterFuncLinks();
 }
 
+// Helper function to truncate strings
+function truncateString(str, len) {
+    if (!str) return '-';
+    if (str.length <= len) return str;
+    return str.substring(0, len) + '...';
+}
+
+// Helper function to render alt status based on attributes
+function renderAltStatus(img) {
+    if (!img.hasAltAttribute) {
+        return 'Missing';
+    } else if (img.isEmptyAlt) {
+        return 'Empty (<code>alt=""</code>)';
+    } else {
+        // Use truncateString for potentially long alt text
+        return `"${truncateString(img.alt, 50)}"`;
+    }
+}
+
 function filterFuncLinks() {
   const list = document.getElementById('results-list');
   if (!list) return;
@@ -275,4 +294,3 @@ function filterFuncLinks() {
     li.style.display = visible ? '' : 'none';
   });
 }
-

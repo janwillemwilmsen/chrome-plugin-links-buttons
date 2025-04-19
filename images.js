@@ -339,7 +339,8 @@ function findAncestorFigureRecursive(element, depth = 0) {
         } catch (e) {
           console.warn('Could not create absolute URL for figure>img src:', imgSrc, e);
         }
-      }
+      } 
+
       // Check direct img srcset as well
       const imgSrcset = imgElement.getAttribute('srcset');
       if (imgSrcset) {
@@ -734,21 +735,26 @@ function getBackgroundImageUrls(element, includePseudo = true) {
 
 // Analyze a single image or SVG element for accessibility and preview info
 async function analyzeSingleImage(el) {
-  if (!el || !el.tagName) return null;
+  if (!el || !el.tagName) {
+    debugLog('Invalid or missing element');
+    return [];
+  }
+
   const tagName = el.tagName.toLowerCase();
   const isSvg = tagName === 'svg';
   const isImg = tagName === 'img';
+  const isBackgroundImage = getBackgroundImageUrls(el).length > 0;
 
-  // Filtering logic (skip display:none)
+  // Skip elements with display: none
   try {
     const computedStyle = window.getComputedStyle(el);
     if (computedStyle.display === 'none') {
       debugLog(`Skipping display:none element: ${el.tagName}#${el.id || '(no id)'}`);
-      return null;
+      return [];
     }
   } catch (e) {
     debugLog(`Error checking style for element, skipping: ${el.tagName}#${el.id || '(no id)'}`, e);
-    return null;
+    return [];
   }
 
   // SVG definition block check
@@ -762,7 +768,7 @@ async function analyzeSingleImage(el) {
     }
     if (!hasNonDefChild && el.children.length > 0) {
       debugLog(`Skipping SVG containing only definition elements: ${el.tagName}#${el.id || '(no id)'}`);
-      return null;
+      return [];
     }
   }
 
@@ -770,6 +776,7 @@ async function analyzeSingleImage(el) {
   el.setAttribute('data-image-id', id);
   const originalOuterHTML = el.outerHTML;
   const isInShadowDom = el.getRootNode() !== document;
+
   let originalUrl = null;
   let previewSrc = null;
   let svgSanitizedSource = null;
@@ -777,42 +784,22 @@ async function analyzeSingleImage(el) {
   let absoluteUseHref = null;
   let hasUseTag = false;
 
-// Remove all DOM node references from the element before returning
-// We'll collect only serializable primitives
-const result = {
-    id,
-    tagName,
-    isSvg,
-    isImg,
-    isInShadowDom,
-    outerHTML: originalOuterHTML
-    // Add more fields below as needed, but do not include any DOM nodes
-};
+  const results = [];
+  const backgroundImageData = getBackgroundImageUrls(el);
 
-if (isImg) {
-    result.src = el.src || null;
-    result.alt = el.alt || null;
-    result.title = el.title || null;
-}
-
-// Clean up any accidental element references
-Object.keys(result).forEach(key => {
-    const val = result[key];
-    if (val && (val instanceof Element || val instanceof Node)) {
-        delete result[key];
-    }
-});
-
-// SVG handling
-if (isSvg) {
+  // SVG handling
+  if (isSvg) {
     const useEl = el.querySelector('use');
     hasUseTag = !!useEl;
-    const hasInternalDefs = !!el.querySelector(':scope > defs, :scope > linearGradient, :scope > radialGradient, :scope > filter, :scope > pattern, :scope > mask');
+    const hasInternalDefs = !!el.querySelector(
+      ':scope > defs, :scope > linearGradient, :scope > radialGradient, :scope > filter, :scope > pattern, :scope > mask'
+    );
     let svgStringForPreview = originalOuterHTML;
+
     if (hasInternalDefs) {
       debugLog(`Processing SVG with internal defs: ${el.id || '(no id)'}`);
       svgStringForPreview = resolveCssVariablesInSvg(el);
-      if(hasUseTag) {
+      if (hasUseTag) {
         useHref = useEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || useEl.getAttribute('href');
         if (useHref && !useHref.startsWith('#')) { try { absoluteUseHref = new URL(useHref, document.baseURI).href; } catch(e){ absoluteUseHref = useHref; } }
         else { absoluteUseHref = useHref; }
@@ -825,19 +812,19 @@ if (isSvg) {
           absoluteUseHref = useHref;
           try {
             const symbolId = useHref.substring(1);
-            console.log(`[DEBUG] Searching for symbol #${symbolId} in page DOM`);
             const symbolElement = findSvgSymbolById(symbolId);
-            console.log(`[DEBUG] Found symbol #${symbolId}? ${!!symbolElement}`);
             if (symbolElement && (symbolElement.tagName.toLowerCase() === 'symbol' || symbolElement.tagName.toLowerCase() === 'svg')) { 
               const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
               newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
               newSvg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
               const attrsToCopy = ['class', 'style', 'width', 'height', 'fill', 'stroke', 'color', 'preserveAspectRatio'];
-              attrsToCopy.forEach(attr => { if (el.hasAttribute(attr)) newSvg.setAttribute(attr, el.getAttribute(attr)); });
+              attrsToCopy.forEach((attr) => {
+                if (el.hasAttribute(attr)) newSvg.setAttribute(attr, el.getAttribute(attr));
+              });
               const viewBox = el.getAttribute('viewBox') || symbolElement.getAttribute('viewBox');
               if (viewBox) newSvg.setAttribute('viewBox', viewBox);
-              if (!newSvg.getAttribute('width') && viewBox) { const vbParts = viewBox.split(/[	s,]+/); if (vbParts.length === 4) newSvg.setAttribute('width', vbParts[2]); }
-              if (!newSvg.getAttribute('height') && viewBox) { const vbParts = viewBox.split(/[	s,]+/); if (vbParts.length === 4) newSvg.setAttribute('height', vbParts[3]); }
+              if (!newSvg.getAttribute('width') && viewBox) { const vbParts = viewBox.split(/[\s,]+/); if (vbParts.length === 4) newSvg.setAttribute('width', vbParts[2]); }
+              if (!newSvg.getAttribute('height') && viewBox) { const vbParts = viewBox.split(/[\s,]+/); if (vbParts.length === 4) newSvg.setAttribute('height', vbParts[3]); }
               if (!newSvg.getAttribute('width')) newSvg.setAttribute('width', '24');
               if (!newSvg.getAttribute('height')) newSvg.setAttribute('height', '24');
               const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -857,9 +844,7 @@ if (isSvg) {
               if (isLikelyArrowIcon(symbolId)) {
                 debugLog(`-> Identified as arrow. Generating default fallback SVG for #${symbolId}...`);
                 const fallbackSvg = createDefaultArrowSvg(el);
-                debugLog(`--> Generated fallback SVG: ${fallbackSvg ? fallbackSvg.substring(0, 100) + '...' : 'null'}`);
                 svgSanitizedSource = sanitizeSvgForPreview(fallbackSvg);
-                debugLog(`---> Sanitized fallback SVG: ${svgSanitizedSource ? svgSanitizedSource.substring(0, 100) + '...' : 'null'}`);
               } else {
                 debugLog(`-> Symbol #${symbolId} not identified as arrow. Preserving original SVG.`);
                 svgSanitizedSource = sanitizeSvgForPreview(originalOuterHTML);
@@ -871,9 +856,7 @@ if (isSvg) {
             if (isLikelyArrowIcon(symbolId)) {
               debugLog(`-> Identified as arrow after error. Generating default fallback SVG for #${symbolId}...`);
               const fallbackSvg = createDefaultArrowSvg(el);
-              debugLog(`--> Generated fallback SVG after error: ${fallbackSvg ? fallbackSvg.substring(0, 100) + '...' : 'null'}`);
               svgSanitizedSource = sanitizeSvgForPreview(fallbackSvg);
-              debugLog(`---> Sanitized fallback SVG after error: ${svgSanitizedSource ? svgSanitizedSource.substring(0, 100) + '...' : 'null'}`);
             } else {
               debugLog(`-> Error processing non-arrow symbol ${useHref}. Preserving original SVG.`);
               svgSanitizedSource = sanitizeSvgForPreview(originalOuterHTML);
@@ -892,7 +875,7 @@ if (isSvg) {
               debugLog(`--> Failed to fetch or process external SVG content for ${useHref}. Preserving original SVG.`);
               svgSanitizedSource = sanitizeSvgForPreview(originalOuterHTML);
             }
-          } catch (e) {
+          } catch (e) { 
             debugLog(`--> Error during external SVG processing setup for ${useHref}: ${e.message}. Preserving original SVG.`);
             absoluteUseHref = useHref;
             svgSanitizedSource = sanitizeSvgForPreview(originalOuterHTML);
@@ -907,7 +890,8 @@ if (isSvg) {
       svgStringForPreview = resolveCssVariablesInSvg(el);
       svgSanitizedSource = sanitizeSvgForPreview(svgStringForPreview);
     }
-    previewSrc = svgSanitizedSource || svgStringForPreview;
+    previewSrc = svgSanitizedSource || svgStringForPreview; 
+
     originalUrl = null;
   }
   // Handle <img>
@@ -919,24 +903,206 @@ if (isSvg) {
         initialSrc = figureInfo.imgSrc;
       }
     }
-    originalUrl = initialSrc;
-    previewSrc = initialSrc;
+    if(initialSrc) {
+      try { 
+        originalUrl = new URL(initialSrc, document.baseURI).href; 
+        previewSrc = originalUrl;
+      } catch (e) { 
+        console.warn(`Invalid initial src: ${initialSrc}`, e); 
+        originalUrl = initialSrc;
+        previewSrc = originalUrl;
+      }
+    } else {
+      // --- MODIFIED WARNING --- 
+      const elementIdentifier = el.id ? `#${el.id}` : (el.className ? `.${el.className.split(' ').join('.')}` : '');
+      console.warn(`Image tag found with no discernible src: ${el.tagName}${elementIdentifier}`, el);
+      // No originalUrl or previewSrc will be set, so this image won't be added to results later.
+    }
   }
-  // Handle background images
+
+  // --- Fetch image data URI if needed --- 
+  if (isImg && originalUrl && !originalUrl.startsWith('data:')) {
+    const fetchUrl = originalUrl;
+    try {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      const loadPromise = new Promise((resolve, reject) => {
+        img.onload = () => resolve(true);
+        img.onerror = (err) => reject(new Error(`Image load failed: ${err.type || 'unknown error'}`));
+        setTimeout(() => reject(new Error('Image load timeout')), 5000);
+      });
+      img.src = fetchUrl;
+      try { 
+        await loadPromise;
+        // Attempt Canvas Conversion (if direct load worked)
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          if(canvas.width === 0 || canvas.height === 0) throw new Error('Canvas dimensions are zero');
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const dataUri = canvas.toDataURL();
+          previewSrc = dataUri;
+          debugLog(`Converted ${fetchUrl.substring(0,60)} to data URI via canvas`);
+        } catch (canvasError) {
+          console.warn(`Canvas conversion failed (tainted?), falling back to fetch: ${fetchUrl.substring(0,60)}`, canvasError);
+          const dataUri = await fetchImageAsDataUri(fetchUrl);
+          if (dataUri) previewSrc = dataUri;
+        }
+      } catch (error) {
+        debugLog(`Direct image load/canvas failed (${error.message}), trying fetch fallback: ${fetchUrl.substring(0,60)}`);
+        const dataUri = await fetchImageAsDataUri(fetchUrl);
+        if (dataUri) previewSrc = dataUri;
+      }
+    } catch (error) {
+      console.error(`Error loading image data for: ${fetchUrl.substring(0,60)}`, error);
+    }
+  }
+
+  // --- Get accessibility attributes --- 
+  const altAttr = isImg ? el.getAttribute('alt') : null;
+  const hasAltAttribute = isImg && el.hasAttribute('alt');
+  const isEmptyAlt = hasAltAttribute && altAttr === '';
+  const role = el.getAttribute('role');
+  const titleAttr = el.getAttribute('title') || '';
+  const ariaLabel = el.getAttribute('aria-label') || '';
+  const svgTitleDesc = isSvg ? getSvgTitleDesc(el) : '';
   
-  // Compose result
-  return {
-    id,
-    tagName,
-    isSvg,
-    isImg,
-    originalUrl,
-    previewSrc,
-    svgSanitizedSource,
-    isInShadowDom,
-    outerHTML: originalOuterHTML,
-    element: el
-  };
+  // Accessibility attributes - note that we check these separately
+  // so one doesn't impact the other (e.g., aria-hidden shouldn't prevent link detection)
+  const isAriaHidden = checkAriaHiddenRecursive(el);
+  const isFocusableFalse = checkFocusableFalseRecursive(el);
+  
+  // Figure info
+  const figureInfo = findAncestorFigureRecursive(el);
+  const labelledByText = getTextForAriaIds(el.getAttribute('aria-labelledby'), el.ownerDocument || document);
+  const describedByText = getTextForAriaIds(el.getAttribute('aria-describedby'), el.ownerDocument || document);
+
+  // --- Process Background Images --- 
+  if (isBackgroundImage) {
+    for (const bgData of backgroundImageData) {
+      const bgId = `${id}${bgData.pseudo ? `-${bgData.pseudo.replace('::', '')}` : ''}`;
+      const bgOriginalUrl = bgData.url;
+      let bgPreviewSrc = bgOriginalUrl;
+
+      if (bgOriginalUrl && !bgOriginalUrl.startsWith('data:')) {
+        try {
+          const img = new Image(); img.crossOrigin = "Anonymous";
+          const loadPromise = new Promise((resolve, reject) => {
+            img.onload = () => resolve(true);
+            img.onerror = (err) => reject(new Error(`Image load failed: ${err.type || 'unknown'}`));
+            setTimeout(() => reject(new Error('Image load timeout')), 5000);
+          });
+          img.src = bgOriginalUrl;
+          try { 
+            await loadPromise;
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              if(canvas.width === 0 || canvas.height === 0) throw new Error('Zero dimensions');
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img,0,0);
+              bgPreviewSrc = canvas.toDataURL();
+            } catch (canvasError) {
+              console.warn(`BG Canvas conversion failed, using fetch fallback: ${bgOriginalUrl.substring(0,60)}`, canvasError);
+              const dataUri = await fetchImageAsDataUri(bgOriginalUrl);
+              if (dataUri) bgPreviewSrc = dataUri;
+            } 
+          } catch (loadError) {
+            const dataUri = await fetchImageAsDataUri(bgOriginalUrl);
+            if (dataUri) bgPreviewSrc = dataUri;
+          }
+        } catch (fetchError) {
+          console.error(`Error loading BG image data for: ${bgOriginalUrl.substring(0,60)}`, fetchError);
+        }
+      }
+      
+      let bgEffectiveLabel = ariaLabel || labelledByText || titleAttr;
+      let bgAltStatus = bgEffectiveLabel ? `Accessible Name: ${bgEffectiveLabel}` :
+        (role === 'presentation' || role === 'none' || isAriaHidden) ? `Decorative Background (${bgData.pseudo || 'element'})` :
+        `Background (${bgData.pseudo || 'element'}) - No alt`;
+      
+      results.push({ 
+        id: bgId, 
+        type: `background${bgData.pseudo ? `-${bgData.pseudo.replace('::', '')}` : ''}`,                     
+        isSvg: false, 
+        isImg: false, 
+        isBackgroundImage: true, 
+        pseudoElement: bgData.pseudo, 
+        isInShadowDom: isInShadowDom,
+        originalUrl: bgOriginalUrl,
+        previewSrc: bgPreviewSrc,
+        outerHTML: originalOuterHTML,
+        altStatus: bgAltStatus, 
+        alt: null, 
+        isEmptyAlt: false, 
+        hasAltAttribute: false, 
+        role: role, 
+        isAriaHidden: isAriaHidden,
+        isFocusableFalse: isFocusableFalse,
+        ariaLabel: ariaLabel, 
+        labelledByText: labelledByText, 
+        describedByText: describedByText, 
+        title: titleAttr, 
+        svgTitleDesc: '',
+        figureInfo: figureInfo, 
+        hasUseTag: false, 
+        useHref: null 
+      });
+    }
+  }
+
+  // --- Add the main element result (img or svg) --- 
+  if ((isImg && originalUrl) || (isSvg && previewSrc)) {
+    let effectiveLabel = isSvg ? (ariaLabel || labelledByText || svgTitleDesc || titleAttr) :
+      (altAttr || ariaLabel || labelledByText || titleAttr);
+    
+    let altStatus = 'Unknown';
+    if (isSvg) {
+      const isDecorative = (role === 'presentation' || role === 'none' || isAriaHidden);
+      altStatus = effectiveLabel ? `Accessible Name: ${effectiveLabel}` :
+        isDecorative ? 'Decorative SVG' :
+        'Missing accessible name';
+
+    } else {
+      altStatus = !hasAltAttribute ? 'Missing alt attribute' :
+        isEmptyAlt ? 'Empty alt attribute' :
+        `Alt: ${altAttr}`;
+    }
+
+    results.push({
+      id: id,
+      type: tagName,
+      isSvg: isSvg,
+      isImg: isImg,
+      isBackgroundImage: false,
+      pseudoElement: null,
+      isInShadowDom: isInShadowDom,
+      originalUrl: originalUrl,
+      previewSrc: previewSrc,
+      backgroundImageUrls: backgroundImageData.filter(bg => !bg.pseudo).map(bg => bg.url),
+      outerHTML: originalOuterHTML,
+      altStatus: altStatus,
+      alt: altAttr,
+      isEmptyAlt: isEmptyAlt,
+      hasAltAttribute: hasAltAttribute,
+      role: role,
+      isAriaHidden: isAriaHidden,
+      isFocusableFalse: isFocusableFalse,
+      ariaLabel: ariaLabel,
+      labelledByText: labelledByText,
+      describedByText: describedByText,
+      title: titleAttr,
+      svgTitleDesc: svgTitleDesc,
+      figureInfo: figureInfo,
+      hasUseTag: hasUseTag,
+      useHref: useHref,
+      absoluteUseHref: absoluteUseHref
+    });
+  }
+  return results; 
 }
 
 // Update getAllImages to include CSS background images
@@ -975,456 +1141,7 @@ if (typeof window !== 'undefined') {
   window.analyzeSingleImage = analyzeSingleImage;
   window.getAllImages = getAllImages;
 }
-//                 return null; 
-//             }
-//         } catch (e) {
-//             // Errors reading style might happen for weird elements, skip them too
-//             debugLog(`Error checking style for element, skipping: ${el.tagName}#${el.id || '(no id)'}`, e);
-//             return null;
-//         }
 
-//         const tagName = el.tagName.toLowerCase();
-//         const isSvg = tagName === 'svg';
-
-//         // Condition 2: SVG definition block check (Simplified)
-//         if (isSvg) {
-//             let hasNonDefChild = false;
-//             // Check if ANY direct child is NOT a definition type
-//             for (const child of el.children) {
-//                  if (!['defs', 'symbol', 'metadata', 'title', 'desc'].includes(child.tagName.toLowerCase())) {
-//                      hasNonDefChild = true;
-//                      break;
-//                  }
-//             }
-//             // Skip only if the SVG has children AND none of them are renderable types
-//             if (!hasNonDefChild && el.children.length > 0) { 
-//                 debugLog(`Skipping SVG containing only definition elements: ${el.tagName}#${el.id || '(no id)'}`);
-//                 return null; 
-//             }
-//         }
-//         // *** END: Relaxed Filtering Logic ***
-
-//         const results = [];
-//         const id = el.getAttribute('data-image-id') || Math.random().toString(36).substr(2, 9);
-//         el.setAttribute('data-image-id', id);
-        
-//         const isImg = tagName === 'img';
-//         const originalOuterHTML = el.outerHTML;
-//         const isInShadowDom = el.getRootNode() !== document;
-
-//         let originalUrl = null;      // To store the original HTTP/HTTPS URL
-//         let previewSrc = null;       // To store the source for preview (Data URI, SVG string, or fallback URL)
-//         let svgSanitizedSource = null; // To specifically hold sanitized SVG string before assigning to previewSrc
-        
-//         let useHref = null;
-//         let absoluteUseHref = null;
-//         let hasUseTag = false;
-
-//         // Correct function name used here:
-//         const backgroundImageData = getBackgroundImageUrls(el);
-//         const isBackgroundImage = backgroundImageData.length > 0;
-
-//         // *** START: Modified SVG Handling Logic ***
-//         if (isSvg) {
-//             const useEl = el.querySelector('use');
-//             hasUseTag = !!useEl;
-//             const hasInternalDefs = !!el.querySelector(':scope > defs, :scope > linearGradient, :scope > radialGradient, :scope > filter, :scope > pattern, :scope > mask');
-            
-//             let svgStringForPreview = originalOuterHTML;
-
-//             if (hasInternalDefs) {
-//                  debugLog(`Processing SVG with internal defs: ${el.id || '(no id)'}`);
-//                  // Resolve CSS variables first for SVGs with defs but potentially also inline styles
-//                  svgStringForPreview = resolveCssVariablesInSvg(el);
-//                  // No need to sanitize here, will be done later
-//                  if(hasUseTag) {
-//                      useHref = useEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || useEl.getAttribute('href');
-//                      if (useHref && !useHref.startsWith('#')) { try { absoluteUseHref = new URL(useHref, document.baseURI).href; } catch(e){ absoluteUseHref = useHref; } }
-//                      else { absoluteUseHref = useHref; }
-//                  }
-//             } 
-//             else if (hasUseTag) {
-//                 useHref = useEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || useEl.getAttribute('href');
-//                 if (useHref) {
-//                      if (useHref.startsWith('#')) {
-//                          debugLog(`Processing SVG with internal symbol use: ${useHref}`);
-//                          absoluteUseHref = useHref;
-//                          try {
-//                             const symbolId = useHref.substring(1);
-//                             console.log(`[DEBUG] Searching for symbol #${symbolId} in page DOM`);
-//                             // Use our improved symbol finder
-//                             const symbolElement = findSvgSymbolById(symbolId);
-//                             console.log(`[DEBUG] Found symbol #${symbolId}? ${!!symbolElement}`);
-//                             if (symbolElement && (symbolElement.tagName.toLowerCase() === 'symbol' || symbolElement.tagName.toLowerCase() === 'svg')) { 
-//                                 const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-//                                 newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-//                                 newSvg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-//                                 const attrsToCopy = ['class', 'style', 'width', 'height', 'fill', 'stroke', 'color', 'preserveAspectRatio'];
-//                                 attrsToCopy.forEach(attr => { if (el.hasAttribute(attr)) newSvg.setAttribute(attr, el.getAttribute(attr)); });
-//                                 const viewBox = el.getAttribute('viewBox') || symbolElement.getAttribute('viewBox');
-//                                 if (viewBox) newSvg.setAttribute('viewBox', viewBox);
-//                                 if (!newSvg.getAttribute('width') && viewBox) { const vbParts = viewBox.split(/[\s,]+/); if (vbParts.length === 4) newSvg.setAttribute('width', vbParts[2]); }
-//                                 if (!newSvg.getAttribute('height') && viewBox) { const vbParts = viewBox.split(/[\s,]+/); if (vbParts.length === 4) newSvg.setAttribute('height', vbParts[3]); }
-//                                 if (!newSvg.getAttribute('width')) newSvg.setAttribute('width', '24');
-//                                 if (!newSvg.getAttribute('height')) newSvg.setAttribute('height', '24');
-//                                 const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-//                                 const clonedSymbol = symbolElement.cloneNode(true);
-//                                 let symbolIdInNewSvg = clonedSymbol.id || `internal-${Math.random().toString(36).substr(2, 9)}`;
-//                                 clonedSymbol.setAttribute('id', symbolIdInNewSvg);
-//                                 defs.appendChild(clonedSymbol);
-//                                 newSvg.appendChild(defs);
-//                                 const newUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-//                                 newUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `#${symbolIdInNewSvg}`);
-//                                 if (useEl.hasAttribute('fill')) newUse.setAttribute('fill', useEl.getAttribute('fill')); else if (el.hasAttribute('fill')) newUse.setAttribute('fill', el.getAttribute('fill'));
-//                                 if (useEl.hasAttribute('stroke')) newUse.setAttribute('stroke', useEl.getAttribute('stroke')); else if (el.hasAttribute('stroke')) newUse.setAttribute('stroke', el.getAttribute('stroke'));
-//                                 newSvg.appendChild(newUse);
-//                                 svgSanitizedSource = sanitizeSvgForPreview(newSvg.outerHTML);
-//                             } else {
-//                                 debugLog(`Internal symbol #${symbolId} not found or invalid. Checking if it's an arrow.`);
-//                                 if (isLikelyArrowIcon(symbolId)) {
-//                                     debugLog(`-> Identified as arrow. Generating default fallback SVG for #${symbolId}...`);
-//                                     const fallbackSvg = createDefaultArrowSvg(el);
-//                                     debugLog(`--> Generated fallback SVG: ${fallbackSvg ? fallbackSvg.substring(0, 100) + '...' : 'null'}`);
-//                                     svgSanitizedSource = sanitizeSvgForPreview(fallbackSvg);
-//                                     debugLog(`---> Sanitized fallback SVG: ${svgSanitizedSource ? svgSanitizedSource.substring(0, 100) + '...' : 'null'}`);
-//                                 } else {
-//                                     debugLog(`-> Symbol #${symbolId} not identified as arrow. Preserving original SVG.`);
-//                                     svgSanitizedSource = sanitizeSvgForPreview(originalOuterHTML);
-//                                 }
-//                             }
-//                         } catch (e) {
-//                             debugLog(`Error processing internal symbol ${useHref}: ${e.message}. Checking if arrow.`);
-//                             const symbolId = useHref.substring(1);
-//                             if (isLikelyArrowIcon(symbolId)) {
-//                                  debugLog(`-> Identified as arrow after error. Generating default fallback SVG for #${symbolId}...`);
-//                                  const fallbackSvg = createDefaultArrowSvg(el);
-//                                  debugLog(`--> Generated fallback SVG after error: ${fallbackSvg ? fallbackSvg.substring(0, 100) + '...' : 'null'}`);
-//                                  svgSanitizedSource = sanitizeSvgForPreview(fallbackSvg);
-//                                  debugLog(`---> Sanitized fallback SVG after error: ${svgSanitizedSource ? svgSanitizedSource.substring(0, 100) + '...' : 'null'}`);
-//                             } else {
-//                                 debugLog(`-> Error processing non-arrow symbol ${useHref}. Preserving original SVG.`);
-//                                 svgSanitizedSource = sanitizeSvgForPreview(originalOuterHTML);
-//                             }
-//                         }
-//                      } else {
-//                          debugLog(`Processing SVG with external use: ${useHref}`);
-//                          let processedSvg = null; // Initialize to null
-//                          try {
-//                              absoluteUseHref = new URL(useHref, document.baseURI).href;
-//                              processedSvg = await fetchAndProcessSvgUse(el);
-//                              if (processedSvg) {
-//                                  debugLog(`--> Successfully processed external SVG for ${useHref}`);
-//                                  svgSanitizedSource = sanitizeSvgForPreview(processedSvg);
-//                              } else {
-//                                  // fetchAndProcessSvgUse returned null (fetch error, CORS, ID not found)
-//                                  debugLog(`--> Failed to fetch or process external SVG content for ${useHref}. Preserving original SVG.`);
-//                                  svgSanitizedSource = sanitizeSvgForPreview(originalOuterHTML);
-//                              }
-//                          } catch (e) { 
-//                              // Error creating URL or other unexpected error during the try block
-//                              debugLog(`--> Error during external SVG processing setup for ${useHref}: ${e.message}. Preserving original SVG.`);
-//                              absoluteUseHref = useHref; // Keep original relative href
-//                              svgSanitizedSource = sanitizeSvgForPreview(originalOuterHTML);
-//                          }
-//                      }
-//                 } else {
-//                      // Use tag without href - resolve CSS vars and sanitize original
-//                      svgStringForPreview = resolveCssVariablesInSvg(el);
-//                      svgSanitizedSource = sanitizeSvgForPreview(svgStringForPreview);
-//                 }
-//             } 
-//             else { // Simple SVG without <use> or complex <defs>
-//                 debugLog(`Processing simple SVG. Resolving CSS Variables first.`);
-//                 // Resolve CSS variables for simple SVGs
-//                 svgStringForPreview = resolveCssVariablesInSvg(el);
-//                 // Sanitize the result
-//                 svgSanitizedSource = sanitizeSvgForPreview(svgStringForPreview);
-//             }
-
-//             // Final assignment (ensure previewSrc gets set unless <use> logic already did)
-//             // The <use> branches MUST set svgSanitizedSource themselves if they succeed.
-//             // If svgSanitizedSource wasn't set by a <use> branch, use the processed one.
-//             previewSrc = svgSanitizedSource || svgStringForPreview; 
-
-//             originalUrl = null;
-//         }
-//         // *** END: Modified SVG Handling Logic ***
-
-//         // --- Handle regular images (<img>) --- 
-//         else if (isImg) {
-//              let initialSrc = el.getAttribute('src') || '';
-//              if (!initialSrc) {
-//                 const figureInfo = findAncestorFigureRecursive(el);
-//                 if (figureInfo.inFigureElement && figureInfo.imgSrc) {
-//                      initialSrc = figureInfo.imgSrc;
-//                 }
-//              }
-//              if(initialSrc) {
-//                  try { 
-//                     originalUrl = new URL(initialSrc, document.baseURI).href; 
-//                     previewSrc = originalUrl;
-//                  } catch (e) { 
-//                      console.warn(`Invalid initial src: ${initialSrc}`, e); 
-//                      originalUrl = initialSrc;
-//                      previewSrc = originalUrl;
-//                  }
-//              } else {
-//                  // --- MODIFIED WARNING --- 
-//                  const elementIdentifier = el.id ? `#${el.id}` : (el.className ? `.${el.className.split(' ').join('.')}` : '');
-//                  console.warn(`Image tag found with no discernible src: ${el.tagName}${elementIdentifier}`, el);
-//                  // No originalUrl or previewSrc will be set, so this image won't be added to results later.
-//              }
-//         }
-
-//         // --- Fetch image data URI if needed --- 
-//         if (isImg && originalUrl && !originalUrl.startsWith('data:')) {
-//             const fetchUrl = originalUrl;
-//             try {
-//                 const img = new Image();
-//                 img.crossOrigin = "Anonymous";
-//                 const loadPromise = new Promise((resolve, reject) => {
-//                     img.onload = () => resolve(true);
-//                     img.onerror = (err) => reject(new Error(`Image load failed: ${err.type || 'unknown error'}`));
-//                     setTimeout(() => reject(new Error('Image load timeout')), 5000);
-//                 });
-//                 img.src = fetchUrl;
-//                 try {
-//                     await loadPromise;
-//                     // Attempt Canvas Conversion (if direct load worked)
-//                     try {
-//                          const canvas = document.createElement('canvas');
-//                          canvas.width = img.naturalWidth;
-//                          canvas.height = img.naturalHeight;
-//                          if(canvas.width === 0 || canvas.height === 0) throw new Error('Canvas dimensions are zero');
-//                          const ctx = canvas.getContext('2d');
-//                          ctx.drawImage(img, 0, 0);
-//                          const dataUri = canvas.toDataURL();
-//                          previewSrc = dataUri;
-//                          debugLog(`Converted ${fetchUrl.substring(0,60)} to data URI via canvas`);
-//                     } catch (canvasError) {
-//                          console.warn(`Canvas conversion failed (tainted?), falling back to fetch: ${fetchUrl.substring(0,60)}`, canvasError);
-//                          const dataUri = await fetchImageAsDataUri(fetchUrl);
-//                          if (dataUri) previewSrc = dataUri;
-//                     }
-//                 } catch (error) {
-//                     debugLog(`Direct image load/canvas failed (${error.message}), trying fetch fallback: ${fetchUrl.substring(0,60)}`);
-//                     const dataUri = await fetchImageAsDataUri(fetchUrl);
-//                     if (dataUri) previewSrc = dataUri;
-//                 }
-//             } catch (error) {
-//                 console.error(`Error loading image data for: ${fetchUrl.substring(0,60)}`, error);
-//             }
-//         }
-
-//         // --- Get accessibility attributes --- 
-//         const altAttr = isImg ? el.getAttribute('alt') : null;
-//         const hasAltAttribute = isImg && el.hasAttribute('alt');
-//         const isEmptyAlt = hasAltAttribute && altAttr === '';
-//         const role = el.getAttribute('role');
-//         const titleAttr = el.getAttribute('title') || '';
-//         const ariaLabel = el.getAttribute('aria-label') || '';
-//         const svgTitleDesc = isSvg ? getSvgTitleDesc(el) : '';
-        
-//         // Accessibility attributes - note that we check these separately
-//         // so one doesn't impact the other (e.g., aria-hidden shouldn't prevent link detection)
-//         const isAriaHidden = checkAriaHiddenRecursive(el);
-//         const isFocusableFalse = checkFocusableFalseRecursive(el);
-        
-//         // --- Always look for ancestor links regardless of aria-hidden status
-//         const ancestorLinkElement = findAncestorLinkElementRecursive(el);
-//         const ancestorLinkInfo = getLinkElementDetails(ancestorLinkElement);
-//         const ancestorLinkOuterHTML = ancestorLinkElement ? ancestorLinkElement.outerHTML : null;
-
-//         // Special debug for SVGs with role="presentation" inside aria-hidden divs
-//         if (isSvg && (role === 'presentation' || role === 'none' || isAriaHidden) && ancestorLinkElement) {
-//             console.log(`[DEBUG] Decorative SVG (${id}) found with ancestor link:`, 
-//                         ancestorLinkElement ? ancestorLinkElement.outerHTML.substring(0, 100) + '...' : 'null');
-//             console.log(`[DEBUG] Link info for decorative SVG:`, ancestorLinkInfo);
-//         }
-        
-//         const figureInfo = findAncestorFigureRecursive(el);
-//         const labelledByText = getTextForAriaIds(el.getAttribute('aria-labelledby'), el.ownerDocument || document);
-//         const describedByText = getTextForAriaIds(el.getAttribute('aria-describedby'), el.ownerDocument || document);
-
-//         // --- Process Background Images --- 
-//         if (isBackgroundImage) {
-//             for (const bgData of backgroundImageData) {
-//                 const bgId = `${id}${bgData.pseudo ? `-${bgData.pseudo.replace('::', '')}` : ''}`;
-//                 const bgOriginalUrl = bgData.url;
-//                 let bgPreviewSrc = bgOriginalUrl;
-
-//                 if (bgOriginalUrl && !bgOriginalUrl.startsWith('data:')) {
-//                    try {
-//                      const img = new Image(); img.crossOrigin = "Anonymous";
-//                      const loadPromise = new Promise((resolve, reject) => {
-//                         img.onload = () => resolve(true);
-//                         img.onerror = (err) => reject(new Error(`Image load failed: ${err.type || 'unknown'}`));
-//                         setTimeout(() => reject(new Error('Image load timeout')), 5000);
-//                      });
-//                      img.src = bgOriginalUrl;
-//                      try { 
-//                          await loadPromise;
-//                          try {
-//                              const canvas = document.createElement('canvas');
-//                              canvas.width = img.naturalWidth;
-//                              canvas.height = img.naturalHeight;
-//                              if(canvas.width === 0 || canvas.height === 0) throw new Error('Zero dimensions');
-//                              const ctx = canvas.getContext('2d');
-//                              ctx.drawImage(img,0,0);
-//                              bgPreviewSrc = canvas.toDataURL();
-//                          } catch (canvasError) {
-//                              console.warn(`BG Canvas conversion failed, using fetch fallback: ${bgOriginalUrl.substring(0,60)}`, canvasError);
-//                              const dataUri = await fetchImageAsDataUri(bgOriginalUrl);
-//                              if (dataUri) bgPreviewSrc = dataUri;
-//                          } 
-//                      } catch (loadError) {
-//                           const dataUri = await fetchImageAsDataUri(bgOriginalUrl);
-//                           if (dataUri) bgPreviewSrc = dataUri;
-//                      }
-//                  } catch (fetchError) {
-//                      console.error(`Error loading BG image data for: ${bgOriginalUrl.substring(0,60)}`, fetchError);
-//                  }
-//                 }
-                 
-//                 let bgEffectiveLabel = ariaLabel || labelledByText || titleAttr;
-//                 let bgAltStatus = bgEffectiveLabel ? `Accessible Name: ${bgEffectiveLabel}` :
-//                     (role === 'presentation' || role === 'none' || isAriaHidden) ? `Decorative Background (${bgData.pseudo || 'element'})` :
-//                     `Background (${bgData.pseudo || 'element'}) - No alt`;
-                 
-//                  results.push({ 
-//                      id: bgId, 
-//                      type: `background${bgData.pseudo ? `-${bgData.pseudo.replace('::', '')}` : ''}`,                     
-//                      isSvg: false, 
-//                      isImg: false, 
-//                      isBackgroundImage: true, 
-//                      pseudoElement: bgData.pseudo, 
-//                      isInShadowDom: isInShadowDom,
-//                      originalUrl: bgOriginalUrl,
-//                      previewSrc: bgPreviewSrc,
-//                      outerHTML: originalOuterHTML,
-//                      altStatus: bgAltStatus, 
-//                      alt: null, 
-//                      isEmptyAlt: false, 
-//                      hasAltAttribute: false, 
-//                      role: role, 
-//                      isAriaHidden: isAriaHidden,
-//                      isFocusableFalse: isFocusableFalse,
-//                      ariaLabel: ariaLabel, 
-//                      labelledByText: labelledByText, 
-//                      describedByText: describedByText, 
-//                      title: titleAttr, 
-//                      svgTitleDesc: '',
-//                      ancestorLinkInfo: ancestorLinkInfo, 
-//                      ancestorLinkOuterHTML: ancestorLinkOuterHTML, 
-//                      figureInfo: figureInfo, 
-//                      hasUseTag: false, 
-//                      useHref: null 
-//                  });
-//             }
-//         }
-
-//         // --- Add the main element result (img or svg) --- 
-//         if ((isImg && originalUrl) || (isSvg && previewSrc)) {
-//              // For SVGs, calculate effectiveLabel but don't let role="presentation" or aria-hidden 
-//              // affect whether we show link information
-//              let effectiveLabel = isSvg ? (ariaLabel || labelledByText || svgTitleDesc || titleAttr) :
-//                 (altAttr || ariaLabel || labelledByText || titleAttr);
-             
-//              let altStatus = 'Unknown';
-//              if (isSvg) {
-//                 // Determine the alt status - we still report if it's decorative for alt status purposes
-//                 const isDecorative = (role === 'presentation' || role === 'none' || isAriaHidden);
-//                 altStatus = effectiveLabel ? `Accessible Name: ${effectiveLabel}` :
-//                             isDecorative ? 'Decorative SVG' :
-//                             'Missing accessible name';
-
-//                 // Special debug for SVGs to see if link info is being lost
-//                 if (isDecorative && ancestorLinkElement) {
-//                     console.log(`[DEBUG] Decorative SVG (${id}) found with ancestor link:`, 
-//                                 ancestorLinkElement ? ancestorLinkElement.outerHTML.substring(0, 100) + '...' : 'null');
-//                     console.log(`[DEBUG] Link info for decorative SVG:`, ancestorLinkInfo);
-//                 }
-//              } else {
-//                 altStatus = !hasAltAttribute ? 'Missing alt attribute' :
-//                             isEmptyAlt ? 'Empty alt attribute' :
-//                             `Alt: ${altAttr}`;
-//              }
-
-//              // Create a special ancestorLinkInfo object if for some reason it's missing
-//              // Try harder to create link info for SVGs inside links
-//              let finalAncestorLinkInfo;
-
-//              if (ancestorLinkInfo && Object.keys(ancestorLinkInfo).length > 0 && ancestorLinkInfo.isLink) {
-//                  // Good case: We have proper link info
-//                  finalAncestorLinkInfo = ancestorLinkInfo;
-//                  console.log(`[DEBUG] Using existing ancestor link info for ${id}:`, finalAncestorLinkInfo);
-//              } else if (ancestorLinkElement) {
-//                  // Link element exists but info object wasn't created correctly
-//                  // Create a minimal but working link info object
-//                  console.log(`[DEBUG] Creating manual link info for ${id} from:`, 
-//                              ancestorLinkElement.tagName.toLowerCase());
-                 
-//                  // Safely get properties
-//                  let linkTextContent = '';
-//                  try {
-//                      linkTextContent = ancestorLinkElement.textContent?.trim() || '';
-//                  } catch (e) { 
-//                      console.log(`[DEBUG] Error getting link text:`, e);
-//                  }
-                 
-//                  // Create simplified link info
-//                  finalAncestorLinkInfo = { 
-//                      isLink: true, 
-//                      tagName: ancestorLinkElement.tagName.toLowerCase(),
-//                      linkTextContent: linkTextContent,
-//                      linkTitle: ancestorLinkElement.getAttribute ? (ancestorLinkElement.getAttribute('title') || null) : null,
-//                      linkAriaLabel: ancestorLinkElement.getAttribute ? (ancestorLinkElement.getAttribute('aria-label') || null) : null
-//                  };
-//                  console.log(`[DEBUG] Created manual link info:`, finalAncestorLinkInfo);
-//              } else {
-//                  // No link found
-//                  finalAncestorLinkInfo = { isLink: false };
-//                  console.log(`[DEBUG] No link found for ${id}, using:`, finalAncestorLinkInfo);
-//              }
-
-//              results.push({
-//                 id: id,
-//                 type: tagName,
-//                 isSvg: isSvg,
-//                 isImg: isImg,
-//                 isBackgroundImage: false,
-//                 pseudoElement: null,
-//                 isInShadowDom: isInShadowDom,
-//                 originalUrl: originalUrl,
-//                 previewSrc: previewSrc,
-//                 backgroundImageUrls: backgroundImageData.filter(bg => !bg.pseudo).map(bg => bg.url),
-//                 outerHTML: originalOuterHTML,
-//                 altStatus: altStatus,
-//                 alt: altAttr,
-//                 isEmptyAlt: isEmptyAlt,
-//                 hasAltAttribute: hasAltAttribute,
-//                 role: role,
-//                 isAriaHidden: isAriaHidden,
-//                 isFocusableFalse: isFocusableFalse,
-//                 ariaLabel: ariaLabel,
-//                 labelledByText: labelledByText,
-//                 describedByText: describedByText,
-//                 title: titleAttr,
-//                 svgTitleDesc: svgTitleDesc,
-//                 ancestorLinkInfo: finalAncestorLinkInfo, // Always include link info even for decorative SVGs
-//                 ancestorLinkOuterHTML: ancestorLinkOuterHTML,
-//                 figureInfo: figureInfo,
-//                 hasUseTag: hasUseTag,
-//                 useHref: useHref,
-//                 absoluteUseHref: absoluteUseHref
-//              });
-
-//         return results; 
-//     });
-//     return Promise.all(imagePromises).then(resultsArrays => 
-//         resultsArrays.filter(result => result !== null).flat()
-//     );
-// }
 // Function to get all <img> and <svg> elements inside <a> or <button> elements
 function getImagesInLinksOrButtons() {
   const elements = Array.from(document.querySelectorAll('a, button'));
@@ -1709,8 +1426,7 @@ window.addEventListener('message', async function(event) {
       error: error
     }, '*');
   }
-});
-// --- End window.postMessage listener ---
+}); // Close window.addEventListener
 
 // --- Listener removed: This code runs in page context, cannot use chrome.runtime --- 
 // chrome.runtime.onMessage.addListener((request, sender, sendResponse) => { ... });
@@ -1986,5 +1702,3 @@ function resolveCssVariablesInSvg(svgElement) {
         return svgElement.outerHTML;
     }
 }
-
- 
