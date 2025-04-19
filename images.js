@@ -890,7 +890,20 @@ async function analyzeSingleImage(el) {
       svgStringForPreview = resolveCssVariablesInSvg(el);
       svgSanitizedSource = sanitizeSvgForPreview(svgStringForPreview);
     }
-    previewSrc = svgSanitizedSource || svgStringForPreview; 
+    // --- FIX: Convert SVG string to Base64 data URI ---
+    const finalSvgString = svgSanitizedSource || svgStringForPreview || '';
+    if (finalSvgString) {
+      try {
+         previewSrc = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(finalSvgString)))}`;
+         // Using unescape(encodeURIComponent()) to handle potential UTF-8 characters before btoa
+      } catch (e) {
+        console.error('Error encoding SVG to Base64:', e, 'SVG String:', finalSvgString.substring(0, 200));
+        previewSrc = null; // Indicate failure
+      }
+    } else {
+      previewSrc = null; // No valid SVG string to encode
+    }
+    // --- End FIX ---
 
     originalUrl = null;
   }

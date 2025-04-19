@@ -169,37 +169,50 @@ function renderResults(items) {
       ${item.inFigureWithFigcaption ? `<span class="meta">In Figure with Figcaption</span><br>` : ''}
       ${item.hasShadowDom ? `<span class=\"meta\">Has Shadow DOM</span><br>` : ''}
       ${item.slotContent ? `<span class=\"meta\">Slot Content: <b>${item.slotContent}</b></span><br>` : ''}
-      ${item.opensInNewWindow ? `<span class="meta">Opens in New Window: <b>${item.opensInNewWindow}</b></span><br>` : ''}
+      ${item.opensInNewWindow ? `<span class="meta">Opens in New Window: <b>${item.opensInNewWindow ? 'Yes' : 'No'}</b></span><br>` : ''}
       ${item.images && item.images.length ? `<span class="meta">Images/SVGs:<ul class="image-details-list">${item.images.map(img => {
-        img._imgId = imageId++; // Assign a temporary ID for scrolling/inspection if needed
+        img._imgId = imageId++; // Assign a temporary ID 
 
+        const altStatus = renderAltStatus(img); // Get { text: '...', class: '...' }
         let detailsHtml = '';
-        if (img.type === 'img') {
-            detailsHtml = `
-                Src: <span class="img-src" title="${img.originalUrl || img.previewSrc || ''}">${truncateString(img.previewSrc || img.originalUrl, 60)}</span><br>
-                Alt: ${renderAltStatus(img)}
-            `;
-        } else if (img.type === 'svg') {
-            detailsHtml = `
-                Role: ${img.role || '-'} | Title Attr: ${img.title || '-'}<br>
-                SVG &lt;title&gt;/&lt;desc&gt;: ${truncateString(img.svgTitleDesc, 50) || '-'}<br>
-                Aria-Label: ${truncateString(img.ariaLabel, 50) || '-'}<br>
-                ${img.hasUseTag ? `Uses: <span title="${img.absoluteUseHref || img.useHref}">${truncateString(img.useHref, 40) || '-'}</span><br>` : ''}
-            `;
+
+        // Common details
+        detailsHtml += img.role ? `<span class="detail-label">Role:</span> <span class="detail-value">${img.role}</span><br>` : '';
+        detailsHtml += img.title ? `<span class="detail-label">Title Attr:</span> <span class="detail-value">${truncateString(img.title, 50)}</span><br>` : '';
+        detailsHtml += img.isAriaHidden ? `<span class="detail-label">Aria Hidden:</span> <span class="detail-value">true</span><br>` : '';
+
+        // Type-specific details
+        if (img.isImg) {
+            detailsHtml += `<span class="detail-label">Src:</span> <span class="detail-value src" title="${img.originalUrl || ''}">${truncateString(img.previewSrc || img.originalUrl, 60)}</span><br>`;
+            detailsHtml += `<span class="detail-label">Alt:</span> <span class="detail-value ${altStatus.class}">${altStatus.text}</span><br>`;
+        } else if (img.isSvg) {
+            detailsHtml += img.svgTitleDesc ? `<span class="detail-label">SVG &lt;title&gt;/&lt;desc&gt;:</span> <span class="detail-value">${truncateString(img.svgTitleDesc, 50)}</span><br>` : '';
+            detailsHtml += img.ariaLabel ? `<span class="detail-label">ARIA Label:</span> <span class="detail-value">${truncateString(img.ariaLabel, 50)}</span><br>` : '';
+            if (img.hasUseTag) {
+                detailsHtml += `<span class="detail-label">Use Href:</span> 
+                               <span class="detail-value src" title="${img.absoluteUseHref || img.useHref}">
+                               ${truncateString(img.useHref || img.absoluteUseHref, 40)}
+                               </span><br>`;
+            }
+            // You might want a specific 'status' for SVGs based on accessible name presence here
+            detailsHtml += `<span class="detail-label">Accessible Name Status:</span> <span class="detail-value">${altStatus.text}</span><br>`; // Reusing altStatus logic for SVG name check
         } else if (img.isBackgroundImage) {
-            detailsHtml = `
-                Source URL: <span class="img-src" title="${img.originalUrl || ''}">${truncateString(img.originalUrl, 60)}</span><br>
-                Applied to: ${img.pseudoElement || 'Element'}
-            `;
+            detailsHtml += `<span class="detail-label">Source URL:</span> <span class="detail-value src" title="${img.originalUrl || ''}">${truncateString(img.originalUrl, 60)}</span><br>`;
+            detailsHtml += `<span class="detail-label">Applied to:</span> <span class="detail-value">${img.pseudoElement || 'Element'}</span><br>`;
+        }
+        
+        // Contextual details
+        if (img.figureInfo?.inFigureElement) {
+             detailsHtml += `<span class="detail-label">In Figure:</span> <span class="detail-value">Yes ${img.figureInfo.hasFigcaption ? '(Caption: ' + truncateString(img.figureInfo.figcaptionText, 30) + ')' : '(No Caption)'}</span><br>`;
         }
 
-        return `<li class="image-detail-item">
+        // Note: We still use the simple preview image from before.
+        // The complex thumbnail generation from renderFilteredImages is not included here.
+        return `<li class="image-detail-item ${altStatus.class}"> 
             <b>ID: ${img._imgId}</b> | Type: <b>${img.type}${img.isBackgroundImage ? ` (${img.pseudoElement || 'bg'})` : ''}</b>
-            <img src="${img.previewSrc}" alt="Preview" class="img-preview" title="${img.altStatus || ''}">
-            <div class="img-data">
+            <img src="${img.previewSrc}" alt="Preview" class="img-preview">
+            <div class="image-details">
                 ${detailsHtml}
-                ${img.isAriaHidden ? `<i>Is Aria-Hidden</i><br>` : ''}
-                ${img.figureInfo && img.figureInfo.inFigureElement ? `<i>In Figure (Caption: ${truncateString(img.figureInfo.captionText, 30) || 'none'})</i><br>` : ''}
             </div>
         </li>`;
       }).join('')}</ul></span>` : ''}
@@ -249,16 +262,35 @@ function truncateString(str, len) {
     return str.substring(0, len) + '...';
 }
 
-// Helper function to render alt status based on attributes for IMG tags
+// Helper function to render alt status based on attributes.
+// Returns an object { text: string, class: string } 
 function renderAltStatus(img) {
-    if (!img.hasAltAttribute) {
-        return '<span style="color: red;">Missing alt attribute</span>';
-    } else if (img.isEmptyAlt) {
-        return '<span style="color: orange;">Empty (<code>alt=""</code>)</span>';
-    } else {
-        // Display the actual alt text, truncated
-        return `"${truncateString(img.alt, 50)}"`; 
+    // Specific logic for IMG tags
+    if (img.isImg) {
+        if (!img.hasAltAttribute) {
+            return { text: 'Missing alt attribute', class: 'image-status-error' };
+        } else if (img.isEmptyAlt) {
+            return { text: 'Empty (<code>alt=""</code>)', class: 'image-status-warning' };
+        } else {
+            return { text: `"${truncateString(img.alt, 50)}"`, class: 'image-status-info' };
+        }
     }
+    // Logic for SVGs (checking effective accessible name)
+    else if (img.isSvg) {
+         // Reconstruct an effective accessible name check (similar to old altStatus logic)
+         const isDecorative = (img.role === 'presentation' || img.role === 'none' || img.isAriaHidden);
+         const effectiveLabel = img.ariaLabel || img.svgTitleDesc || img.title; // Simplified check
+         
+         if (effectiveLabel) {
+             return { text: `Has Acc Name`, class: 'image-status-info' }; // Indicate name found
+         } else if (isDecorative) {
+             return { text: 'Decorative SVG', class: 'image-status-info' }; // Decorative is often acceptable
+         } else {
+             return { text: 'Missing Acc Name', class: 'image-status-error' }; // Missing name is an issue
+         }
+    }
+     // Default/Background Image status
+    return { text: 'N/A', class: 'image-status-info' }; 
 }
 
 function filterFuncLinks() {
