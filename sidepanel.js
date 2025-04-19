@@ -89,6 +89,26 @@ async function gatherLinksAndButtons() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Add event listener for reload button
+  const reloadBtn = document.getElementById('reload-btn');
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', () => {
+      // Reload the current tab
+      if (chrome && chrome.tabs) {
+        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+          if (tabs[0] && tabs[0].id) {
+            chrome.tabs.reload(tabs[0].id);
+          }
+        });
+      }
+      // Reload the side panel content (simulate by reloading the panel document)
+      location.reload();
+      // Optionally, send a message to the background script to refresh any caches or state
+      if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ action: 'soft-reload' });
+      }
+    });
+  }
   renderFilterPanel();
   gatherLinksAndButtons();
 });
