@@ -185,6 +185,9 @@ function renderResults(items) {
         if (img.isImg) {
             detailsHtml += `<span class="detail-label">Src:</span> <span class="detail-value src" title="${img.originalUrl || ''}">${truncateString(img.previewSrc || img.originalUrl, 60)}</span><br>`;
             detailsHtml += `<span class="detail-label">Alt:</span> <span class="detail-value ${altStatus.class}">${altStatus.text}</span><br>`;
+            detailsHtml += img.ariaLabel ? `<span class="detail-label">ARIA Label:</span> <span class="detail-value">${truncateString(img.ariaLabel, 50)}</span><br>` : '';
+            detailsHtml += img.ariaLabelledBy ? `<span class="detail-label">ARIA Labelled By:</span> <span class="detail-value">${truncateString(img.ariaLabelledBy, 50)}</span><br>` : '';
+            detailsHtml += img.ariaDescribedBy ? `<span class="detail-label">ARIA Described By:</span> <span class="detail-value">${truncateString(img.ariaDescribedBy, 50)}</span><br>` : '';
         } else if (img.isSvg) {
             detailsHtml += img.svgTitleDesc ? `<span class="detail-label">SVG &lt;title&gt;/&lt;desc&gt;:</span> <span class="detail-value">${truncateString(img.svgTitleDesc, 50)}</span><br>` : '';
             detailsHtml += img.ariaLabel ? `<span class="detail-label">ARIA Label:</span> <span class="detail-value">${truncateString(img.ariaLabel, 50)}</span><br>` : '';

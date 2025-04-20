@@ -200,6 +200,7 @@ async function extractElementData(el, sequentialId, isButton) {
                     previewSrc: imgData.previewSrc, // Keep preview src
                     alt: imgData.alt, // Raw alt attribute text (null if not img)
                     title: imgData.title, // Raw title attribute text
+                    ariaLabel: imgData.ariaLabel, // The aria-label from the image/svg itself
                     svgTitleDesc: imgData.svgTitleDesc, // Combined title/desc from SVG <title>/<desc>
                     outerHTML: imgData.outerHTML, // outerHTML of the original analyzed element (img/svg/div)
                     isAriaHidden: imgData.isAriaHidden,
@@ -211,6 +212,13 @@ async function extractElementData(el, sequentialId, isButton) {
                     absoluteUseHref: imgData.absoluteUseHref,
                     figureInfo: imgData.figureInfo // Pass through figure info
                 };
+                 // Add labelledByText and describedByText if they exist
+                 if (imgData.labelledByText) {
+                     formattedImage.labelledByText = imgData.labelledByText;
+                 }
+                 if (imgData.describedByText) {
+                     formattedImage.describedByText = imgData.describedByText;
+                 }
                  // Add svgSource only if it's an SVG and has a preview source
                  if (imgData.isSvg && imgData.previewSrc) {
                     formattedImage.svgSource = imgData.previewSrc;
