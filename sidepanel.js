@@ -152,8 +152,8 @@ function renderResults(items) {
       `<span class="meta"><b>Button ID: ${item.sequentialId}</b></span><br>` : 
       `<span class="meta"><b>Link ID: ${item.sequentialId}</b></span><br>`;
     html += `
-    <pre>${JSON.stringify(item, null, 2)}</pre>
     <li class="item" data-isbutton="${isButton}" data-haslinktxtr="${haslinkTxtR}" data-imageinlink="${imageInLink}" data-ariaelement="${ariaElement}" data-hastitleattribute="${hastitleAttribute}" data-hastabindex="${hasTabindex}" data-opensinnewwindow="${opensInNewWindow}\">\n      ${idLabel}
+    <pre>${JSON.stringify(item, null, 2)}</pre>
       <span class="type">[${item.tag}]</span>
       <span class="text">${item.text || '(no text)'}</span><br>
       ${item.linkUrl ? `<span class="url">${item.linkUrl}</span><br>` : ''}
@@ -305,7 +305,9 @@ function filterFuncLinks() {
     hasTabindex: document.querySelector('input[name="hasTabindexFilter"]:checked').value,
     opensInNewWindow: document.querySelector('input[name="opensInNewWindowFilter"]:checked').value
   };
-  list.querySelectorAll('li').forEach(li => {
+  // --- MODIFIED: Target only li elements with the 'item' class ---
+  list.querySelectorAll('li.item').forEach(li => {
+  // --- END MODIFIED ---
     let visible = true;
     for (const key in filters) {
       const value = filters[key];
