@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Links Accessibility Test</title>
+  <style>body { font-family: sans-serif; }</style>
+</head>
+<body>
+  <h1>Links Accessibility Test</h1>
+  <section>
+    <h2>Basic Links</h2>
+    <a href="#">Simple link</a><br>
+    <a href="#" aria-label="Aria Label Link">Link with aria-label</a><br>
+    <a href="#" aria-labelledby="lbl1">Link with aria-labelledby</a>
+    <span id="lbl1">Labelled by Span</span><br>
+    <a href="#" aria-describedby="desc1">Link with aria-describedby</a>
+    <span id="desc1">Described by Span</span><br>
+    <a href="#" tabindex="-1">Link with tabindex -1</a><br>
+    <a href="#" role="button">Link with role button</a><br>
+    <a href="#" aria-hidden="true">Link aria-hidden true</a><br>
+    <a href="#" aria-label="" aria-labelledby="" aria-describedby="">Link with empty ARIA</a><br>
+    <a href="#" id="link-id" class="test-link">Link with id and class</a><br>
+    <a href="#" title="Link Title">Link with title</a><br>
+    <a href="#" target="_blank" rel="noopener">Link opens in new window</a><br>
+    <a href="#" role="presentation">Link with role presentation</a><br>
+    <a href="#" style="background:url('https://via.placeholder.com/20')">Link with background image</a><br>
+    <figure>
+      <a href="#">Link in figure</a>
+      <figcaption>Figure Caption</figcaption>
+    </figure>
+    <a href="#" aria-label="">Link with empty aria-label</a><br>
+    <a href="#" aria-label=" ">Link with whitespace aria-label</a><br>
+    <a href="#" aria-labelledby="missing">Link with missing labelledby</a><br>
+    <a href="#" aria-describedby="missingdesc">Link with missing describedby</a><br>
+    <a href="#" aria-label="Link with text" aria-labelledby="lbl2">Link with aria-label and labelledby</a>
+    <span id="lbl2">Labelled by 2</span><br>
+    <a href="#" aria-label="Link with text" aria-describedby="desc2">Link with aria-label and describedby</a>
+    <span id="desc2">Described by 2</span><br>
+  </section>
+  <section>
+    <h2>Links with Images</h2>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="Placeholder"></a><br>
+    <a href="#"><img src="https://via.placeholder.com/40" alt=""></a><br>
+    <a href="#"><img src="https://via.placeholder.com/40" aria-label="Image Aria Label"></a><br>
+    <a href="#"><img src="https://via.placeholder.com/40" aria-labelledby="imglbl1"></a>
+    <span id="imglbl1">Image Labelled by</span><br>
+    <a href="#"><img src="https://via.placeholder.com/40" aria-describedby="imgdesc1"></a>
+    <span id="imgdesc1">Image Described by</span><br>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="" aria-hidden="true"></a><br>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="" role="presentation"></a><br>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="" style="background:url('https://via.placeholder.com/10')"></a><br>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="" id="img-id" class="img-class"></a><br>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="" title="Image Title"></a><br>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="" aria-label="" aria-labelledby="" aria-describedby=""></a><br>
+    <figure>
+      <a href="#"><img src="https://via.placeholder.com/40" alt="In figure"></a>
+      <figcaption>Image Figure Caption</figcaption>
+    </figure>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="" aria-label="Image label" aria-labelledby="imglbl2"></a>
+    <span id="imglbl2">Image Labelled by 2</span><br>
+    <a href="#"><img src="https://via.placeholder.com/40" alt="" aria-label="Image label" aria-describedby="imgdesc2"></a>
+    <span id="imgdesc2">Image Described by 2</span><br>
+  </section>
+  <section>
+    <h2>Links with SVGs</h2>
+    <a href="#" aria-label="SVG Link">
+      <svg width="40" height="40" role="img" aria-label="SVG Icon">
+        <circle cx="20" cy="20" r="15" fill="blue" />
+      </svg>
+    </a><br>
+    <a href="#">
+      <svg width="40" height="40" aria-labelledby="svglbl1">
+        <title id="svglbl1">SVG Labelled</title>
+        <rect width="30" height="30" fill="green" />
+      </svg>
+    </a><br>
+    <a href="#">
+      <svg width="40" height="40" aria-describedby="svgdesc1">
+        <desc id="svgdesc1">SVG Described</desc>
+        <ellipse cx="20" cy="20" rx="15" ry="10" fill="red" />
+      </svg>
+    </a><br>
+    <a href="#"><svg width="40" height="40" aria-hidden="true"></svg></a><br>
+    <a href="#"><svg width="40" height="40" role="presentation"></svg></a><br>
+    <a href="#"><svg width="40" height="40" id="svg-id" class="svg-class"></svg></a><br>
+    <a href="#"><svg width="40" height="40" aria-label="" aria-labelledby="" aria-describedby=""></svg></a><br>
+    <a href="#"><svg width="40" height="40" aria-label="SVG label" aria-labelledby="svglbl2"></svg></a>
+    <span id="svglbl2">SVG Labelled by 2</span><br>
+    <a href="#"><svg width="40" height="40" aria-label="SVG label" aria-describedby="svgdesc2"></svg></a>
+    <span id="svgdesc2">SVG Described by 2</span><br>
+    <a href="#"><svg width="40" height="40"><use href="#icon-test" /></svg></a>
+    <svg style="display:none"><symbol id="icon-test" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="gray"/></symbol></svg>
+  </section>
+
+  <section>
+    <h2>Buttons (native and ARIA)</h2>
+    <button>Simple button</button><br>
+    <button aria-label="Button Aria Label">Button with aria-label</button><br>
+    <button aria-labelledby="btnlbl1">Button with aria-labelledby</button>
+    <span id="btnlbl1">Button Labelled by</span><br>
+    <button aria-describedby="btndesc1">Button with aria-describedby</button>
+    <span id="btndesc1">Button Described by</span><br>
+    <button disabled>Disabled button</button><br>
+    <button aria-hidden="true">Button aria-hidden true</button><br>
+    <button id="btn-id" class="btn-class">Button with id and class</button><br>
+    <button title="Button Title">Button with title</button><br>
+    <button aria-label="" aria-labelledby="" aria-describedby="">Button with empty ARIA</button><br>
+    <button aria-label=" ">Button with whitespace aria-label</button><br>
+    <button aria-labelledby="missing">Button with missing labelledby</button><br>
+    <button aria-describedby="missingdesc">Button with missing describedby</button><br>
+    <button aria-label="Button label" aria-labelledby="btnlbl2">Button with aria-label and labelledby</button>
+    <span id="btnlbl2">Button Labelled by 2</span><br>
+    <button aria-label="Button label" aria-describedby="btndesc2">Button with aria-label and describedby</button>
+    <span id="btndesc2">Button Described by 2</span><br>
+    <button tabindex="-1">Button with tabindex -1</button><br>
+    <button role="link">Button with role link</button><br>
+    <button><img src="https://via.placeholder.com/20" alt="Btn Img"></button><br>
+    <button><svg width="20" height="20"><circle cx="10" cy="10" r="8" fill="pink"/></svg></button><br>
+    <button style="background:url('https://via.placeholder.com/10')">Button with background image</button><br>
+  </section>
+
+
+  <h1>SVGs Accessibility Test</h1>
+  <section>
+    <h2>Standalone SVGs</h2>
+    <svg width="60" height="60" role="img" aria-label="Decorative Circle">
+      <circle cx="30" cy="30" r="25" fill="purple" />
+    </svg>
+    <svg width="60" height="60" aria-labelledby="svg-title-1">
+      <title id="svg-title-1">Labeled Rectangle</title>
+      <rect width="50" height="30" fill="orange" />
+    </svg>
+    <svg width="60" height="60" aria-describedby="svg-desc-1">
+      <desc id="svg-desc-1">Described Ellipse</desc>
+      <ellipse cx="30" cy="30" rx="25" ry="15" fill="teal" />
+    </svg>
+    <svg width="60" height="60" aria-label="" aria-labelledby="" aria-describedby=""></svg>
+    <svg width="60" height="60" aria-hidden="true"></svg>
+    <svg width="60" height="60" role="presentation"></svg>
+    <svg width="60" height="60" id="svg-standalone-id" class="svg-standalone-class"></svg>
+    <svg width="60" height="60" aria-label="SVG label" aria-labelledby="svg-title-2"></svg>
+    <span id="svg-title-2">External SVG Labelled By</span>
+    <svg width="60" height="60" aria-label="SVG label" aria-describedby="svg-desc-2"></svg>
+    <span id="svg-desc-2">External SVG Described By</span>
+    <svg width="60" height="60"><use href="#icon-standalone" /></svg>
+    <svg style="display:none"><symbol id="icon-standalone" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="gray"/></symbol></svg>
+    <svg width="60" height="60"></svg>
+    <svg width="60" height="60"><!-- Empty SVG --></svg>
+    <svg width="60" height="60" aria-labelledby="missing"></svg>
+    <svg width="60" height="60" aria-describedby="missingdesc"></svg>
+    <figure>
+      <svg width="40" height="40" aria-label="SVG in figure"><rect width="30" height="30" fill="blue"/></svg>
+      <figcaption>SVG Figure Caption</figcaption>
+    </figure>
+  </section>
+  <section>
+    <h2>SVGs as Buttons</h2>
+    <button aria-label="SVG Button">
+      <svg width="40" height="40" role="img" aria-label="Button SVG">
+        <polygon points="10,30 30,10 50,30" fill="brown" />
+      </svg>
+    </button>
+    <button>
+      <svg width="40" height="40" aria-labelledby="svg-btn-title">
+        <title id="svg-btn-title">SVG Button Title</title>
+        <line x1="10" y1="10" x2="30" y2="30" stroke="black" stroke-width="2" />
+      </svg>
+    </button>
+    <button aria-label="" aria-labelledby="" aria-describedby="">
+      <svg width="40" height="40"></svg>
+    </button>
+    <button aria-hidden="true">
+      <svg width="40" height="40"></svg>
+    </button>
+    <button id="svg-btn-id" class="svg-btn-class">
+      <svg width="40" height="40"></svg>
+    </button>
+    <button title="SVG Button Title">
+      <svg width="40" height="40"></svg>
+    </button>
+    <button>
+      <svg width="40" height="40" aria-label="SVG label" aria-labelledby="svg-btn-title-2"></svg>
+    </button>
+    <span id="svg-btn-title-2">SVG Button Labelled By 2</span>
+    <button>
+      <svg width="40" height="40" aria-label="SVG label" aria-describedby="svg-btn-desc-2"></svg>
+    </button>
+    <span id="svg-btn-desc-2">SVG Button Described By 2</span>
+    <button disabled>
+      <svg width="40" height="40"></svg>
+    </button>
+    <button tabindex="-1">
+      <svg width="40" height="40"></svg>
+    </button>
+    <button role="link">
+      <svg width="40" height="40"></svg>
+    </button>
+    <button>
+      <svg width="40" height="40"><use href="#icon-btn" /></svg>
+    </button>
+    <svg style="display:none"><symbol id="icon-btn" viewBox="0 0 20 20"><rect width="20" height="20" fill="green"/></symbol></svg>
+  </section>
+  <section>
+    <h2>SVGs with Various ARIA</h2>
+    <svg width="40" height="40" aria-label="SVG with aria-label"></svg>
+    <svg width="40" height="40" aria-labelledby="lbl2"></svg>
+    <span id="lbl2">External SVG Label</span>
+    <svg width="40" height="40" aria-describedby="desc2"></svg>
+    <span id="desc2">External SVG Desc</span>
+    <svg width="40" height="40" aria-label="" aria-labelledby="" aria-describedby=""></svg>
+    <svg width="40" height="40" aria-hidden="true"></svg>
+    <svg width="40" height="40" role="presentation"></svg>
+    <svg width="40" height="40" id="svg-var-id" class="svg-var-class"></svg>
+    <svg width="40" height="40" aria-labelledby="missing"></svg>
+    <svg width="40" height="40" aria-describedby="missingdesc"></svg>
+    <svg width="40" height="40"><use href="#icon-var" /></svg>
+    <svg style="display:none"><symbol id="icon-var" viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="10" ry="5" fill="orange"/></symbol></svg>
+  </section>
+
+  <h1>Shadow DOM Accessibility Test</h1>
+  <div class="host" id="shadow-host-1">Shadow Host 1 (Links & Buttons)</div>
+  <div class="host" id="shadow-host-2">Shadow Host 2 (Images & SVGs)</div>
+  <script>
+    // Shadow Host 1: Links and Buttons
+    const host1 = document.getElementById('shadow-host-1');
+    const shadow1 = host1.attachShadow({mode:'open'});
+    shadow1.innerHTML = `
+      <a href="#">Shadow Link</a><br>
+      <a href="#" aria-label="Shadow Aria Label">Shadow Link with aria-label</a><br>
+      <a href="#" aria-labelledby="shadow-lbl1">Shadow Link with aria-labelledby</a>
+      <span id="shadow-lbl1">Shadow Labelled by Span</span><br>
+      <a href="#" aria-describedby="shadow-desc1">Shadow Link with aria-describedby</a>
+      <span id="shadow-desc1">Shadow Described by Span</span><br>
+      <a href="#" tabindex="-1">Shadow Link with tabindex -1</a><br>
+      <a href="#" role="button">Shadow Link with role button</a><br>
+      <a href="#" aria-hidden="true">Shadow Link aria-hidden true</a><br>
+      <a href="#" aria-label="" aria-labelledby="" aria-describedby="">Shadow Link with empty ARIA</a><br>
+      <a href="#" id="shadow-link-id" class="shadow-test-link">Shadow Link with id and class</a><br>
+      <a href="#" title="Shadow Link Title">Shadow Link with title</a><br>
+      <a href="#" target="_blank" rel="noopener">Shadow Link opens in new window</a><br>
+      <a href="#" role="presentation">Shadow Link with role presentation</a><br>
+      <a href="#" style="background:url('https://via.placeholder.com/20')">Shadow Link with background image</a><br>
+      <figure>
+        <a href="#">Shadow Link in figure</a>
+        <figcaption>Shadow Figure Caption</figcaption>
+      </figure>
+      <button>Shadow Button</button><br>
+      <button aria-label="Shadow Button Label">Shadow Button with aria-label</button><br>
+      <button aria-labelledby="shadow-btnlbl1">Shadow Button with aria-labelledby</button>
+      <span id="shadow-btnlbl1">Shadow Button Labelled by</span><br>
+      <button aria-describedby="shadow-btndesc1">Shadow Button with aria-describedby</button>
+      <span id="shadow-btndesc1">Shadow Button Described by</span><br>
+      <button disabled>Shadow Disabled button</button><br>
+      <button aria-hidden="true">Shadow Button aria-hidden true</button><br>
+      <button id="shadow-btn-id" class="shadow-btn-class">Shadow Button with id and class</button><br>
+      <button title="Shadow Button Title">Shadow Button with title</button><br>
+      <button aria-label="" aria-labelledby="" aria-describedby="">Shadow Button with empty ARIA</button><br>
+      <button aria-label=" ">Shadow Button with whitespace aria-label</button><br>
+      <button aria-labelledby="shadow-missing">Shadow Button with missing labelledby</button><br>
+      <button aria-describedby="shadow-missingdesc">Shadow Button with missing describedby</button><br>
+      <button aria-label="Shadow Button label" aria-labelledby="shadow-btnlbl2">Shadow Button with aria-label and labelledby</button>
+      <span id="shadow-btnlbl2">Shadow Button Labelled by 2</span><br>
+      <button aria-label="Shadow Button label" aria-describedby="shadow-btndesc2">Shadow Button with aria-label and describedby</button>
+      <span id="shadow-btndesc2">Shadow Button Described by 2</span><br>
+      <button tabindex="-1">Shadow Button with tabindex -1</button><br>
+      <button role="link">Shadow Button with role link</button><br>
+      <button><img src="https://via.placeholder.com/20" alt="Shadow Btn Img"></button><br>
+      <button><svg width="20" height="20"><circle cx="10" cy="10" r="8" fill="pink"/></svg></button><br>
+      <button style="background:url('https://via.placeholder.com/10')">Shadow Button with background image</button><br>
+    `;
+    // Shadow Host 2: Images and SVGs
+    const host2 = document.getElementById('shadow-host-2');
+    const shadow2 = host2.attachShadow({mode:'open'});
+    shadow2.innerHTML = `
+      <img src="https://via.placeholder.com/40" alt="Shadow Img"><br>
+      <img src="https://via.placeholder.com/40" alt="" aria-hidden="true"><br>
+      <img src="https://via.placeholder.com/40" alt="" role="presentation"><br>
+      <img src="https://via.placeholder.com/40" alt="" style="background:url('https://via.placeholder.com/10')"><br>
+      <img src="https://via.placeholder.com/40" alt="" id="shadow-img-id" class="shadow-img-class"><br>
+      <img src="https://via.placeholder.com/40" alt="" title="Shadow Image Title"><br>
+      <img src="https://via.placeholder.com/40" alt="" aria-label="" aria-labelledby="" aria-describedby=""><br>
+      <figure>
+        <img src="https://via.placeholder.com/40" alt="Shadow In figure">
+        <figcaption>Shadow Image Figure Caption</figcaption>
+      </figure>
+      <img src="https://via.placeholder.com/40" alt="" aria-label="Shadow Image label" aria-labelledby="shadow-imglbl2"><br>
+      <span id="shadow-imglbl2">Shadow Image Labelled by 2</span><br>
+      <img src="https://via.placeholder.com/40" alt="" aria-label="Shadow Image label" aria-describedby="shadow-imgdesc2"><br>
+      <span id="shadow-imgdesc2">Shadow Image Described by 2</span><br>
+      <svg width="40" height="40" aria-label="Shadow SVG"><circle cx="20" cy="20" r="15" fill="navy" /></svg><br>
+      <svg width="40" height="40" aria-labelledby="shadow-svg-title"><title id="shadow-svg-title">Shadow SVG Title</title><rect width="30" height="30" fill="maroon" /></svg><br>
+      <svg width="40" height="40" aria-describedby="shadow-svg-desc"><desc id="shadow-svg-desc">Shadow SVG Desc</desc><ellipse cx="20" cy="20" rx="15" ry="10" fill="olive" /></svg><br>
+      <svg width="40" height="40" aria-label="" aria-labelledby="" aria-describedby=""></svg><br>
+      <svg width="40" height="40" aria-hidden="true"></svg><br>
+      <svg width="40" height="40" role="presentation"></svg><br>
+      <svg width="40" height="40" id="shadow-svg-id" class="shadow-svg-class"></svg><br>
+      <svg width="40" height="40" aria-label="Shadow SVG label" aria-labelledby="shadow-svgtitle2"></svg><br>
+      <span id="shadow-svgtitle2">Shadow SVG Labelled by 2</span><br>
+      <svg width="40" height="40" aria-label="Shadow SVG label" aria-describedby="shadow-svgdesc2"></svg><br>
+      <span id="shadow-svgdesc2">Shadow SVG Described by 2</span><br>
+      <svg width="40" height="40"><use href="#shadow-icon-test" /></svg><br>
+      <svg style="display:none"><symbol id="shadow-icon-test" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="gray"/></symbol></svg><br>
+      <svg width="40" height="40"></svg><br>
+      <svg width="40" height="40"><!-- Empty SVG --></svg><br>
+      <svg width="40" height="40" aria-labelledby="shadow-missing"></svg><br>
+      <svg width="40" height="40" aria-describedby="shadow-missingdesc"></svg><br>
+    `;
+  </script>
+  <div class="host" id="shadow-host-nested">Shadow Host Nested (Nested Shadow DOM)</div>
+  <script>
+    // Nested Shadow DOM
+    const hostNested = document.getElementById('shadow-host-nested');
+    const shadowNested = hostNested.attachShadow({mode:'open'});
+    const nestedDiv = document.createElement('div');
+    nestedDiv.textContent = 'Nested Shadow Host';
+    shadowNested.appendChild(nestedDiv);
+    const nestedShadow = nestedDiv.attachShadow({mode:'open'});
+    nestedShadow.innerHTML = `
+      <a href="#">Nested Shadow Link</a><br>
+      <button>Nested Shadow Button</button><br>
+      <img src="https://via.placeholder.com/40" alt="Nested Shadow Img"><br>
+      <svg width="40" height="40" aria-label="Nested Shadow SVG"><circle cx="20" cy="20" r="15" fill="purple" /></svg><br>
+    `;
+  </script>
+
+</body>
+</html>

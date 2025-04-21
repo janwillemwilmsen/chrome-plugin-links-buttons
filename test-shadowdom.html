@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shadow DOM Accessibility Test</title>
+  <style>body { font-family: sans-serif; } .host { border: 1px solid #aaa; margin: 1em 0; padding: 1em; }</style>
+</head>
+<body>
+  <h1>Shadow DOM Accessibility Test</h1>
+  <div class="host" id="shadow-host-1">Shadow Host 1 (Links & Buttons)</div>
+  <div class="host" id="shadow-host-2">Shadow Host 2 (Images & SVGs)</div>
+  <script>
+    // Shadow Host 1: Links and Buttons
+    const host1 = document.getElementById('shadow-host-1');
+    const shadow1 = host1.attachShadow({mode:'open'});
+    shadow1.innerHTML = `
+      <a href="#">Shadow Link</a><br>
+      <a href="#" aria-label="Shadow Aria Label">Shadow Link with aria-label</a><br>
+      <a href="#" aria-labelledby="shadow-lbl1">Shadow Link with aria-labelledby</a>
+      <span id="shadow-lbl1">Shadow Labelled by Span</span><br>
+      <a href="#" aria-describedby="shadow-desc1">Shadow Link with aria-describedby</a>
+      <span id="shadow-desc1">Shadow Described by Span</span><br>
+      <a href="#" tabindex="-1">Shadow Link with tabindex -1</a><br>
+      <a href="#" role="button">Shadow Link with role button</a><br>
+      <a href="#" aria-hidden="true">Shadow Link aria-hidden true</a><br>
+      <a href="#" aria-label="" aria-labelledby="" aria-describedby="">Shadow Link with empty ARIA</a><br>
+      <a href="#" id="shadow-link-id" class="shadow-test-link">Shadow Link with id and class</a><br>
+      <a href="#" title="Shadow Link Title">Shadow Link with title</a><br>
+      <a href="#" target="_blank" rel="noopener">Shadow Link opens in new window</a><br>
+      <a href="#" role="presentation">Shadow Link with role presentation</a><br>
+      <a href="#" style="background:url('https://via.placeholder.com/20')">Shadow Link with background image</a><br>
+      <figure>
+        <a href="#">Shadow Link in figure</a>
+        <figcaption>Shadow Figure Caption</figcaption>
+      </figure>
+      <button>Shadow Button</button><br>
+      <button aria-label="Shadow Button Label">Shadow Button with aria-label</button><br>
+      <button aria-labelledby="shadow-btnlbl1">Shadow Button with aria-labelledby</button>
+      <span id="shadow-btnlbl1">Shadow Button Labelled by</span><br>
+      <button aria-describedby="shadow-btndesc1">Shadow Button with aria-describedby</button>
+      <span id="shadow-btndesc1">Shadow Button Described by</span><br>
+      <button disabled>Shadow Disabled button</button><br>
+      <button aria-hidden="true">Shadow Button aria-hidden true</button><br>
+      <button id="shadow-btn-id" class="shadow-btn-class">Shadow Button with id and class</button><br>
+      <button title="Shadow Button Title">Shadow Button with title</button><br>
+      <button aria-label="" aria-labelledby="" aria-describedby="">Shadow Button with empty ARIA</button><br>
+      <button aria-label=" ">Shadow Button with whitespace aria-label</button><br>
+      <button aria-labelledby="shadow-missing">Shadow Button with missing labelledby</button><br>
+      <button aria-describedby="shadow-missingdesc">Shadow Button with missing describedby</button><br>
+      <button aria-label="Shadow Button label" aria-labelledby="shadow-btnlbl2">Shadow Button with aria-label and labelledby</button>
+      <span id="shadow-btnlbl2">Shadow Button Labelled by 2</span><br>
+      <button aria-label="Shadow Button label" aria-describedby="shadow-btndesc2">Shadow Button with aria-label and describedby</button>
+      <span id="shadow-btndesc2">Shadow Button Described by 2</span><br>
+      <button tabindex="-1">Shadow Button with tabindex -1</button><br>
+      <button role="link">Shadow Button with role link</button><br>
+      <button><img src="https://via.placeholder.com/20" alt="Shadow Btn Img"></button><br>
+      <button><svg width="20" height="20"><circle cx="10" cy="10" r="8" fill="pink"/></svg></button><br>
+      <button style="background:url('https://via.placeholder.com/10')">Shadow Button with background image</button><br>
+    `;
+    // Shadow Host 2: Images and SVGs
+    const host2 = document.getElementById('shadow-host-2');
+    const shadow2 = host2.attachShadow({mode:'open'});
+    shadow2.innerHTML = `
+      <img src="https://via.placeholder.com/40" alt="Shadow Img"><br>
+      <img src="https://via.placeholder.com/40" alt="" aria-hidden="true"><br>
+      <img src="https://via.placeholder.com/40" alt="" role="presentation"><br>
+      <img src="https://via.placeholder.com/40" alt="" style="background:url('https://via.placeholder.com/10')"><br>
+      <img src="https://via.placeholder.com/40" alt="" id="shadow-img-id" class="shadow-img-class"><br>
+      <img src="https://via.placeholder.com/40" alt="" title="Shadow Image Title"><br>
+      <img src="https://via.placeholder.com/40" alt="" aria-label="" aria-labelledby="" aria-describedby=""><br>
+      <figure>
+        <img src="https://via.placeholder.com/40" alt="Shadow In figure">
+        <figcaption>Shadow Image Figure Caption</figcaption>
+      </figure>
+      <img src="https://via.placeholder.com/40" alt="" aria-label="Shadow Image label" aria-labelledby="shadow-imglbl2"><br>
+      <span id="shadow-imglbl2">Shadow Image Labelled by 2</span><br>
+      <img src="https://via.placeholder.com/40" alt="" aria-label="Shadow Image label" aria-describedby="shadow-imgdesc2"><br>
+      <span id="shadow-imgdesc2">Shadow Image Described by 2</span><br>
+      <svg width="40" height="40" aria-label="Shadow SVG"><circle cx="20" cy="20" r="15" fill="navy" /></svg><br>
+      <svg width="40" height="40" aria-labelledby="shadow-svg-title"><title id="shadow-svg-title">Shadow SVG Title</title><rect width="30" height="30" fill="maroon" /></svg><br>
+      <svg width="40" height="40" aria-describedby="shadow-svg-desc"><desc id="shadow-svg-desc">Shadow SVG Desc</desc><ellipse cx="20" cy="20" rx="15" ry="10" fill="olive" /></svg><br>
+      <svg width="40" height="40" aria-label="" aria-labelledby="" aria-describedby=""></svg><br>
+      <svg width="40" height="40" aria-hidden="true"></svg><br>
+      <svg width="40" height="40" role="presentation"></svg><br>
+      <svg width="40" height="40" id="shadow-svg-id" class="shadow-svg-class"></svg><br>
+      <svg width="40" height="40" aria-label="Shadow SVG label" aria-labelledby="shadow-svgtitle2"></svg><br>
+      <span id="shadow-svgtitle2">Shadow SVG Labelled by 2</span><br>
+      <svg width="40" height="40" aria-label="Shadow SVG label" aria-describedby="shadow-svgdesc2"></svg><br>
+      <span id="shadow-svgdesc2">Shadow SVG Described by 2</span><br>
+      <svg width="40" height="40"><use href="#shadow-icon-test" /></svg><br>
+      <svg style="display:none"><symbol id="shadow-icon-test" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="gray"/></symbol></svg><br>
+      <svg width="40" height="40"></svg><br>
+      <svg width="40" height="40"><!-- Empty SVG --></svg><br>
+      <svg width="40" height="40" aria-labelledby="shadow-missing"></svg><br>
+      <svg width="40" height="40" aria-describedby="shadow-missingdesc"></svg><br>
+    `;
+  </script>
+  <div class="host" id="shadow-host-nested">Shadow Host Nested (Nested Shadow DOM)</div>
+  <script>
+    // Nested Shadow DOM
+    const hostNested = document.getElementById('shadow-host-nested');
+    const shadowNested = hostNested.attachShadow({mode:'open'});
+    const nestedDiv = document.createElement('div');
+    nestedDiv.textContent = 'Nested Shadow Host';
+    shadowNested.appendChild(nestedDiv);
+    const nestedShadow = nestedDiv.attachShadow({mode:'open'});
+    nestedShadow.innerHTML = `
+      <a href="#">Nested Shadow Link</a><br>
+      <button>Nested Shadow Button</button><br>
+      <img src="https://via.placeholder.com/40" alt="Nested Shadow Img"><br>
+      <svg width="40" height="40" aria-label="Nested Shadow SVG"><circle cx="20" cy="20" r="15" fill="purple" /></svg><br>
+    `;
+  </script>
+</body>
+</html>
