@@ -1,5 +1,6 @@
 // Utility: Recursively get all elements, including shadow roots
 function getAllElements(root = document) {
+	console.log("getAllElements called with root:", root);
   let elements = [];
   const treeWalker = document.createTreeWalker(
     root,
@@ -39,6 +40,7 @@ function unique(arr) {
 
 
 async function gatherLinksAndButtons() {
+	console.log("gatherLinksAndButtons called");
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || !tab.id) {
     renderResults([]);
@@ -49,34 +51,94 @@ async function gatherLinksAndButtons() {
       renderResults([]);
       return;
     }
+	if (!response || !response.success) {
+		console.warn("Failed to get links/buttons from content script or response unsuccessful.");
+		renderResults([]); // Render empty if unsuccessful
+		return;
+	  }
     renderResults(response.items || []);
   });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  // Add event listener for reload button
-  const reloadBtn = document.getElementById('reload-btn');
-  if (reloadBtn) {
-    reloadBtn.addEventListener('click', () => {
-      // Reload the current tab
-      if (chrome && chrome.tabs) {
-        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-          if (tabs[0] && tabs[0].id) {
-            chrome.tabs.reload(tabs[0].id);
-          }
-        });
-      }
-      // Reload the side panel content (simulate by reloading the panel document)
-      location.reload();
-      // Optionally, send a message to the background script to refresh any caches or state
-      if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({ action: 'soft-reload' });
-      }
-    });
-  }
-  renderFilterPanel();
-  gatherLinksAndButtons();
-});
+document.addEventListener('DOMContentLoaded', async function() {
+	// Add event listener for reload button
+	const reloadBtn = document.getElementById('reload-btn');
+  
+	if (reloadBtn) {
+	  reloadBtn.addEventListener('click', () => {
+		// Show loading indicator immediately
+		const results = document.getElementById('results');
+		if (results) {
+		  results.innerHTML = '<em>Reloading page and fetching data...</em>';
+		}
+  
+		// Query the active tab
+		if (chrome && chrome.tabs) {
+		  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+			if (tabs[0] && tabs[0].id) {
+			  const tabIdToReload = tabs[0].id;
+  
+			  // --- Define the listener FIRST ---
+			  const listener = (updatedTabId, changeInfo, tab) => {
+				// Check if it's the tab we reloaded and if it's completely loaded
+				if (updatedTabId === tabIdToReload && changeInfo.status === 'complete') {
+				  // --- Tab is loaded, NOW gather data ---
+				  console.log(`Tab ${tabIdToReload} finished reloading. Fetching links/buttons.`);
+				  gatherLinksAndButtons(); // Fetch fresh data
+				  renderFilterPanel();    // Re-render filters if needed
+  
+				  // --- IMPORTANT: Remove the listener ---
+				  chrome.tabs.onUpdated.removeListener(listener);
+				}
+			  };
+  
+			  // --- Add the listener BEFORE reloading ---
+			  chrome.tabs.onUpdated.addListener(listener);
+  
+			  // --- Initiate the reload ---
+			  chrome.tabs.reload(tabIdToReload, { bypassCache: true }, () => {
+				if (chrome.runtime.lastError) {
+				   console.error("Error initiating tab reload:", chrome.runtime.lastError.message);
+				   // Clean up listener if reload fails to start
+				   chrome.tabs.onUpdated.removeListener(listener);
+				   if (results) {
+					  results.innerHTML = '<em>Error starting page reload.</em>';
+				   }
+				} else {
+				   console.log(`Initiated reload for tab ${tabIdToReload}. Waiting for completion...`);
+				   // No location.reload() here! We wait for the listener.
+				}
+			  });
+  
+			} else {
+			  // If no active tab found, maybe just refresh panel state?
+			  console.log("No active tab found to reload.");
+			   if (results) {
+				 results.innerHTML = '<em>No active tab found.</em>';
+			   }
+			  // Or potentially call gatherLinksAndButtons directly if appropriate?
+			  // gatherLinksAndButtons();
+			  // renderFilterPanel();
+			}
+		  });
+		} else {
+		  console.log("chrome.tabs API not available.");
+		   if (results) {
+			 results.innerHTML = '<em>Browser API error.</em>';
+		   }
+		}
+	  });
+	}
+  
+	// Initial load when the panel opens
+	const results = document.getElementById('results');
+	if (results) {
+	  results.innerHTML = '<em>Loading...</em>';
+	}
+	await gatherLinksAndButtons();
+	renderFilterPanel();
+  });
+  
 
 function renderFilterPanel() {
   const panel = document.getElementById('filter-panel');
@@ -131,6 +193,7 @@ function renderFilterPanel() {
 }
 
 function renderResults(items) {
+	console.log("renderResults called with items:");
   const results = document.getElementById('results');
   if (!items.length) {
     results.innerHTML = '<em>No links or buttons found.</em>';
@@ -149,16 +212,18 @@ function renderResults(items) {
     const opensInNewWindow = !!item.opensInNewWindow;
     // Assign separate sequential IDs for links and buttons
     const idLabel = isButton ? 
-      `<span class="meta"><b>Button ID: ${item.sequentialId}</b></span><br>` : 
-      `<span class="meta"><b>Link ID: ${item.sequentialId}</b></span><br>`;
+      `<span class="meta">Button [#${item.sequentialId}]</span>` : 
+      `<span class="meta">Link [#${item.sequentialId}]</span>`;
     html += `
-    <li class="item" data-isbutton="${isButton}" data-haslinktxtr="${haslinkTxtR}" data-imageinlink="${imageInLink}" data-ariaelement="${ariaElement}" data-hastitleattribute="${hastitleAttribute}" data-hastabindex="${hasTabindex}" data-opensinnewwindow="${opensInNewWindow}\">\n      ${idLabel}
-    <pre>${JSON.stringify(item, null, 2)}</pre>
-      <span class="type">[${item.tag}]</span>
+    <li class="item" data-isbutton="${isButton}" data-haslinktxtr="${haslinkTxtR}" data-imageinlink="${imageInLink}" data-ariaelement="${ariaElement}" data-hastitleattribute="${hastitleAttribute}" data-hastabindex="${hasTabindex}" data-opensinnewwindow="${opensInNewWindow}\">
+	\n      ${idLabel}
+    <!----<pre>{JSON.stringify(item, null, 2)}</pre>
+      <span class="type">[${item.tag}]</span>-->
       <span class="text">${item.text || '(no text)'}</span><br>
       ${item.linkUrl ? `<span class="url">${item.linkUrl}</span><br>` : ''}
       ${item.id ? `<span class="meta">ID: <b>${item.id}</b></span><br>` : ''}
-      ${item.className ? `<span class="meta">Class: <b>${item.className}</b></span><br>` : ''}
+      ${typeof item.tabindex === 'number' && !isNaN(item.tabindex) ? `<span class="meta">Tabindex: <b>${item.tabindex}</b></span><br>` : ''}
+      ${item.className ? `<!--span class="meta">Class: <b>${item.className}</b></span><br--->` : ''}
       ${item.role ? `<span class="meta">Role: <b>${item.role}</b></span><br>` : ''}
       ${item.title ? `<span class="meta">Title: <b>${item.title}</b></span><br>` : ''}
       ${item.ariaHidden ? `<span class="meta">aria-hidden: <b>${item.ariaHidden}</b></span><br>` : ''}
@@ -170,7 +235,7 @@ function renderResults(items) {
       ${item.hasShadowDom ? `<span class=\"meta\">Has Shadow DOM</span><br>` : ''}
       ${item.slotContent ? `<span class=\"meta\">Slot Content: <b>${item.slotContent}</b></span><br>` : ''}
       ${item.opensInNewWindow ? `<span class="meta">Opens in New Window: <b>${item.opensInNewWindow ? 'Yes' : 'No'}</b></span><br>` : ''}
-      ${item.images && item.images.length ? `<span class="meta">Images/SVGs:<ul class="image-details-list">${item.images.map(img => {
+      ${item.images && item.images.length ? `<span class="meta"><ul class="image-details-list" style="padding-top:0px;padding-left: 16px;">${item.images.map(img => {
         img._imgId = imageId++; // Assign a temporary ID 
 
         const altStatus = renderAltStatus(img); // Get { text: '...', class: '...' }
@@ -178,7 +243,7 @@ function renderResults(items) {
 
         // Common details
         detailsHtml += img.role ? `<span class="detail-label">Role:</span> <span class="detail-value">${img.role}</span><br>` : '';
-        detailsHtml += img.title ? `<span class="detail-label">Title Attr:</span> <span class="detail-value">${truncateString(img.title, 50)}</span><br>` : '';
+        detailsHtml += img.title ? `<span class="detail-label">Title:</span> <span class="detail-value">${truncateString(img.title, 50)}</span><br>` : '';
         detailsHtml += img.isAriaHidden ? `<span class="detail-label">Aria Hidden:</span> <span class="detail-value">true</span><br>` : '';
 
         // Type-specific details
@@ -186,11 +251,24 @@ function renderResults(items) {
             detailsHtml += `<span class="detail-label">Src:</span> <span class="detail-value src" title="${img.originalUrl || ''}">${truncateString(img.previewSrc || img.originalUrl, 60)}</span><br>`;
             detailsHtml += `<span class="detail-label">Alt:</span> <span class="detail-value ${altStatus.class}">${altStatus.text}</span><br>`;
             detailsHtml += img.ariaLabel ? `<span class="detail-label">ARIA Label:</span> <span class="detail-value">${truncateString(img.ariaLabel, 50)}</span><br>` : '';
-            detailsHtml += img.ariaLabelledBy ? `<span class="detail-label">ARIA Labelled By:</span> <span class="detail-value">${truncateString(img.ariaLabelledBy, 50)}</span><br>` : '';
-            detailsHtml += img.ariaDescribedBy ? `<span class="detail-label">ARIA Described By:</span> <span class="detail-value">${truncateString(img.ariaDescribedBy, 50)}</span><br>` : '';
+            detailsHtml += img.ariaLabelledBy ? `<span class="detail-label">ARIA Labelled By:</span> <span class="detail-value">${truncateString(img.ariaLabelledBy, 50)}${img.labelledByText ? ' (' + truncateString(img.labelledByText, 50) + ')' : ''}</span><br>` : '';
+            detailsHtml += img.ariaDescribedBy ? `<span class="detail-label">ARIA Described By:</span> <span class="detail-value">${truncateString(img.ariaDescribedBy, 50)}${img.describedByText ? ' (' + truncateString(img.describedByText, 50) + ')' : ''}</span><br>` : '';
+// Show describedByText even if ariaDescribedBy is not set, but describedByText is present
+if (!img.ariaDescribedBy && img.describedByText) {
+    detailsHtml += `<span class="detail-label">ARIA Described By Text:</span> <span class="detail-value">${truncateString(img.describedByText, 50)}</span><br>`;
+}
+
+
+
+if (!img.ariaLabelledBy && img.labelledByText) {
+    detailsHtml += `<span class="detail-label">ARIA Labelled By Text:</span> <span class="detail-value">${truncateString(img.labelledByText, 50)}</span><br>`;
+}
+
         } else if (img.isSvg) {
             detailsHtml += img.svgTitleDesc ? `<span class="detail-label">SVG &lt;title&gt;/&lt;desc&gt;:</span> <span class="detail-value">${truncateString(img.svgTitleDesc, 50)}</span><br>` : '';
             detailsHtml += img.ariaLabel ? `<span class="detail-label">ARIA Label:</span> <span class="detail-value">${truncateString(img.ariaLabel, 50)}</span><br>` : '';
+            detailsHtml += img.ariaLabelledBy ? `<span class="detail-label">ARIA Labelled By:</span> <span class="detail-value">${truncateString(img.ariaLabelledBy, 50)}${img.labelledByText ? ' (' + truncateString(img.labelledByText, 50) + ')' : ''}</span><br>` : '';
+            detailsHtml += img.ariaDescribedBy ? `<span class="detail-label">ARIA Described By:</span> <span class="detail-value">${truncateString(img.ariaDescribedBy, 50)}${img.describedByText ? ' (' + truncateString(img.describedByText, 50) + ')' : ''}</span><br>` : '';
             if (img.hasUseTag) {
                 detailsHtml += `<span class="detail-label">Use Href:</span> 
                                <span class="detail-value src" title="${img.absoluteUseHref || img.useHref}">
@@ -211,10 +289,14 @@ function renderResults(items) {
 
         // Note: We still use the simple preview image from before.
         // The complex thumbnail generation from renderFilteredImages is not included here.
+		// 				Type: <b>${img.type}${img.isBackgroundImage ? ` (${img.pseudoElement || 'bg'})` : ''}</b>
+
         return `<li class="image-detail-item ${altStatus.class}"> 
-            <b>ID: ${img._imgId}</b> | Type: <b>${img.type}${img.isBackgroundImage ? ` (${img.pseudoElement || 'bg'})` : ''}</b>
-            <img src="${img.previewSrc}" alt="Preview" class="img-preview">
-            <div class="image-details">
+		<div class="image-thumb">
+		<img src="${img.previewSrc}" alt="Preview" class="image-thumb-preview">
+		</div>
+		<div class="image-details">
+		<!---b>ID: {img._imgId}</b---> 
                 ${detailsHtml}
             </div>
         </li>`;
@@ -224,6 +306,9 @@ function renderResults(items) {
       <button class="html-btn" data-idx="${idx}">Show HTML</button>
       <div class="popover" style="display:none;position:absolute;z-index:9999;background:#fff;border:1px solid #ccc;padding:0.5em;max-width:400px;max-height:300px;overflow:auto;"></div>
     </li>`;
+
+	updateSummaryCounts(items);
+
   });
   html += '</ul>';
   results.innerHTML = html;
@@ -256,6 +341,48 @@ function renderResults(items) {
     };
   });
   filterFuncLinks();
+
+}
+
+
+// filepath: c:\www\PLUGIN\links-buttons\sidepanel.js
+function updateSummaryCounts(items) {
+    const totalLinksEl = document.getElementById('total-links-count');
+    const totalButtonsEl = document.getElementById('total-buttons-count');
+    const totalImagesEl = document.getElementById('total-images-count');
+    const totalSvgsEl = document.getElementById('total-svgs-count');
+
+    let linkCount = 0;
+    let buttonCount = 0;
+    let imageCount = 0;
+    let svgCount = 0;
+
+    if (items && items.length) {
+        items.forEach(item => {
+            // Count Links and Buttons
+            if (item.isButton) {
+                buttonCount++;
+            } else {
+                linkCount++;
+            }
+            // Count Images and SVGs within the item
+            if (item.images && item.images.length) {
+                item.images.forEach(img => {
+                    if (img.isImg) {
+                        imageCount++;
+                    } else if (img.isSvg) {
+                        svgCount++;
+                    }
+                });
+            }
+        });
+    }
+
+    // Update the summary counts in the DOM
+    if (totalLinksEl) totalLinksEl.textContent = linkCount;
+    if (totalButtonsEl) totalButtonsEl.textContent = buttonCount;
+    if (totalImagesEl) totalImagesEl.textContent = imageCount;
+    if (totalSvgsEl) totalSvgsEl.textContent = svgCount;
 }
 
 // Helper function to truncate strings
@@ -323,3 +450,80 @@ function filterFuncLinks() {
     li.style.display = visible ? '' : 'none';
   });
 }
+
+
+
+
+ // Function to load and display FAQs
+ function loadFAQs() {
+  const faqContainer = document.getElementById('faqList');
+  if (!faqContainer) return;
+
+  fetch(chrome.runtime.getURL('faqs.json'))
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(faqs => {
+      faqContainer.innerHTML = ''; // Clear loading message
+
+      if (!faqs || !Array.isArray(faqs) || faqs.length === 0) {
+        faqContainer.innerHTML = '<div class="no-faqs">No FAQs available</div>';
+        return;
+      }
+
+      // Create FAQ elements
+      faqs.forEach((faq, index) => {
+        const faqItem = document.createElement('div');
+        faqItem.className = 'faq-item';
+        
+        const question = document.createElement('div');
+        question.className = 'faq-question';
+        question.textContent = faq.question;
+        question.setAttribute('aria-expanded', 'false');
+        question.setAttribute('aria-controls', `faq-answer-${index}`);
+        
+        const answer = document.createElement('div');
+        answer.className = 'faq-answer';
+        answer.id = `faq-answer-${index}`;
+        answer.innerHTML = faq.answer.replace(/\n/g, '<br>');
+        answer.setAttribute('aria-hidden', 'true');
+        
+        // Toggle answer display on question click
+        question.addEventListener('click', () => {
+          const isOpen = answer.classList.contains('open');
+          
+          // Close all other FAQs
+          document.querySelectorAll('.faq-question').forEach(q => {
+            q.classList.remove('open');
+            q.setAttribute('aria-expanded', 'false');
+          });
+          document.querySelectorAll('.faq-answer').forEach(a => {
+            a.classList.remove('open');
+            a.setAttribute('aria-hidden', 'true');
+          });
+          
+          // Toggle current FAQ
+          if (!isOpen) {
+            question.classList.add('open');
+            answer.classList.add('open');
+            question.setAttribute('aria-expanded', 'true');
+            answer.setAttribute('aria-hidden', 'false');
+          }
+        });
+        
+        faqItem.appendChild(question);
+        faqItem.appendChild(answer);
+        faqContainer.appendChild(faqItem);
+      });
+    })
+    .catch(error => {
+      console.error('Error loading FAQs:', error);
+      faqContainer.innerHTML = `<div class="error-message">Error loading FAQs: ${error.message}</div>`;
+    });
+}
+
+// Load FAQs when panel is initialized
+loadFAQs();

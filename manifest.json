@@ -18,6 +18,12 @@
   "side_panel": {
     "default_path": "sidepanel.html"
   },
+  "web_accessible_resources": [
+  {
+    "resources": ["faqs.json"],
+    "matches": ["<all_urls>"]
+  }
+],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

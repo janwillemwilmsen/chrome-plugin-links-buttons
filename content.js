@@ -19,6 +19,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Use Promise.all to wait for all async calls to extractElementData
         const items = await Promise.all(itemsPromises);
         console.log('[ContentScript] Sending items:', items);
+		const jsonString = JSON.stringify(items);
+		const totalLength = jsonString.length;
+		console.log(`[ContentScript] Estimated total character length of items (as JSON string): ${totalLength}`);
+		// Optional: Log size in KB/MB for easier reading
+		 console.log(`[ContentScript] Estimated size: ${(totalLength / 1024).toFixed(2)} KB / ${(totalLength / 1024 / 1024).toFixed(2)} MB`);
+
+
+		 
         sendResponse({ success: true, items });
       } catch (e) {
         console.error('[ContentScript] Error processing get-links-buttons:', e);
@@ -87,10 +95,39 @@ async function extractElementData(el, sequentialId, isButton) {
   let ariaLabelledBy = el.getAttribute && el.getAttribute('aria-labelledby');
   let ariaDescribedBy = el.getAttribute && el.getAttribute('aria-describedby');
   let title = el.getAttribute ? (el.getAttribute('title') || '') : ''; // Extract title attribute
+  let tabindex = null;
+  if (el.hasAttribute && el.hasAttribute('tabindex')) {
+    const tb = el.getAttribute('tabindex');
+    tabindex = tb !== null ? Number(tb) : null;
+  }
+  // Deep search for element by id, including shadow DOM
+  function findElementByIdDeep(id, root = document) {
+    // Try light DOM first
+    if (root.getElementById) {
+      const el = root.getElementById(id);
+      if (el) return el;
+    }
+    // Recursively search shadow roots
+    const treeWalker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_ELEMENT,
+      null,
+      false
+    );
+    let node = treeWalker.currentNode;
+    while (node) {
+      if (node.shadowRoot) {
+        const found = findElementByIdDeep(id, node.shadowRoot);
+        if (found) return found;
+      }
+      node = treeWalker.nextNode();
+    }
+    return null;
+  }
   function resolveAriaRefs(refStr) {
     if (!refStr) return '';
-    return refStr.split(' ').map(id => {
-      const ref = document.getElementById(id);
+    return refStr.split(/\s+/).map(id => {
+      const ref = findElementByIdDeep(id);
       return ref ? ref.textContent.trim() : '';
     }).filter(Boolean).join(' ');
   }
@@ -258,6 +295,7 @@ async function extractElementData(el, sequentialId, isButton) {
     ariaLabelledByText,
     ariaDescribedBy,
     ariaDescribedByText,
+    tabindex,
     linkUrl,
     text,
     title, // Include title in return object

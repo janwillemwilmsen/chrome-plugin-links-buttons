@@ -615,8 +615,109 @@ async function fetchAndProcessSvgUse(svgElement) {
     }
 }
 
+
+// --- NEW: Resizing Function ---
+const MAX_PREVIEW_DIMENSION = 150; // Max width/height for preview in pixels
+const PREVIEW_JPEG_QUALITY = 0.7; // JPEG quality (0.0 to 1.0) - Use JPEG for photos
+const MAX_PREVIEW_DATA_URI_LENGTH = 256 * 1024 * 1000; // 256KB limit for the final preview string
+
+async function createResizedPreviewDataUri(url) {
+    if (!url || url.startsWith('data:')) { // Don't re-process data URIs
+         return url; // Return existing data URI or null
+    }
+    debugLog(`Creating resized preview for: ${url.substring(0, 80)}...`);
+    try {
+        // Fetch the image as a blob first to check size (optional but good practice)
+        const initialResponse = await fetch(url, { mode: 'cors' });
+         if (!initialResponse.ok) throw new Error(`Initial fetch failed: ${initialResponse.status}`);
+         const blob = await initialResponse.blob();
+
+         // Optional: Skip resizing if original blob is excessively large (e.g., > 20MB)
+         const MAX_ORIGINAL_BLOB_SIZE = 20 * 1024 * 1024;
+         if (blob.size > MAX_ORIGINAL_BLOB_SIZE) {
+             console.warn(`Original image blob too large (${(blob.size / 1024 / 1024).toFixed(1)}MB), skipping preview generation for: ${url}`);
+             return null; // Indicate no preview generated
+         }
+
+        // Create an ImageBitmap (more efficient than <img> element for canvas)
+        const imageBitmap = await createImageBitmap(blob);
+
+        const originalWidth = imageBitmap.width;
+        const originalHeight = imageBitmap.height;
+
+        if (originalWidth === 0 || originalHeight === 0) {
+             imageBitmap.close(); // Clean up bitmap
+             throw new Error('Image has zero dimensions');
+        }
+
+        // Calculate new dimensions, maintaining aspect ratio
+        let targetWidth = originalWidth;
+        let targetHeight = originalHeight;
+        if (originalWidth > MAX_PREVIEW_DIMENSION || originalHeight > MAX_PREVIEW_DIMENSION) {
+            const ratio = Math.min(MAX_PREVIEW_DIMENSION / originalWidth, MAX_PREVIEW_DIMENSION / originalHeight);
+            targetWidth = Math.round(originalWidth * ratio);
+            targetHeight = Math.round(originalHeight * ratio);
+            debugLog(`Resizing from ${originalWidth}x${originalHeight} to ${targetWidth}x${targetHeight}`);
+        } else {
+             debugLog(`Image within preview size (${originalWidth}x${originalHeight}), using original dimensions.`);
+        }
+
+
+        // Create canvas and draw resized image
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        // Draw white background for transparent images (optional, prevents black background on JPEG conversion)
+        // ctx.fillStyle = '#FFFFFF';
+        // ctx.fillRect(0, 0, targetWidth, targetHeight);
+        ctx.drawImage(imageBitmap, 0, 0, targetWidth, targetHeight);
+
+        // Close the ImageBitmap to free memory
+		imageBitmap.close();
+
+        // --- MODIFIED: Determine output format ---
+        let outputMimeType = 'image/jpeg'; // Default to JPEG for good compression
+        let qualityArgument = PREVIEW_JPEG_QUALITY; // Use quality for JPEG
+
+        // If the original blob type was PNG, output as PNG to preserve transparency
+        if (blob.type === 'image/png') {
+            outputMimeType = 'image/png';
+            qualityArgument = undefined; // quality argument is not used for PNG, pass undefined
+            debugLog(`Original type is PNG, exporting preview as PNG.`);
+        }
+        // Optional: Handle GIF - could convert to PNG to keep transparency (first frame)
+        else if (blob.type === 'image/gif') {
+             outputMimeType = 'image/png'; // Convert GIF to PNG
+             qualityArgument = undefined;
+             debugLog(`Original type is GIF, exporting preview as PNG.`);
+        }
+        // For other types (jpeg, webp, etc.) or unknown, stick with JPEG
+
+        // Get Data URI from canvas using the determined format
+        const dataUri = canvas.toDataURL(outputMimeType, qualityArgument);
+        
+
+        // --- FINAL SIZE CHECK ---
+        if (dataUri.length > MAX_PREVIEW_DATA_URI_LENGTH) {
+            console.warn(`Resized preview Data URI still exceeds limit (${(dataUri.length / 1024).toFixed(1)} KB) for: ${url}`);
+            return null; // Return null if even the resized preview is too big
+        }
+        // --- END FINAL SIZE CHECK ---
+
+        debugLog(`Generated preview URI length: ${(dataUri.length / 1024).toFixed(1)} KB`);
+        return dataUri;
+
+    } catch (error) {
+        console.error(`Error creating resized preview for ${url}:`, error);
+        return null; // Return null on any error during resizing
+    }
+}
+// --- END NEW Resizing Function ---
+
 // Add these helper functions back if they're missing
 async function fetchImageAsDataUri(url) {
+	console.log('Fetching image as Data URI:', url);
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -636,6 +737,9 @@ function convertBlobToDataUri(blob) {
         reader.readAsDataURL(blob);
     });
 }
+
+
+
 
 
 function getBackgroundImageUrls(element, includePseudo = true) {
@@ -786,6 +890,7 @@ async function analyzeSingleImage(el) {
 
   const results = [];
   const backgroundImageData = getBackgroundImageUrls(el);
+  let isSvgSourceInImg = false; // Flag for <img src=".svg"> case
 
   // SVG handling
   if (isSvg) {
@@ -933,9 +1038,67 @@ async function analyzeSingleImage(el) {
     }
   }
 
+  // --- NEW: Check if the <img> source is an SVG file ---
+  if (originalUrl && originalUrl.toLowerCase().endsWith('.svg')) {
+	isSvgSourceInImg = true;
+	debugLog(`Detected <img> tag with SVG source: ${originalUrl}`);
+	try {
+		// Fetch the SVG content as text
+		const response = await fetch(originalUrl, { mode: 'cors' });
+		if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+		const svgText = await response.text();
+
+		// Sanitize and encode
+		const sanitizedSvg = sanitizeSvgForPreview(svgText);
+		const finalSvgString = sanitizedSvg || svgText || '';
+
+		if (finalSvgString) {
+			 function utf8ToBase64(str) { /* ... include the helper function from previous response ... */
+				try {
+					if (typeof TextEncoder !== 'undefined') {
+						const encoder = new TextEncoder(); const uint8Array = encoder.encode(str);
+						let binaryString = ''; uint8Array.forEach(byte => { binaryString += String.fromCharCode(byte); });
+						return btoa(binaryString);
+					} else { return btoa(unescape(encodeURIComponent(str))); }
+				} catch (e) { console.error("Error during Base64 encoding:", e); return null; }
+			 }
+			 const base64Svg = utf8ToBase64(finalSvgString);
+			 if (base64Svg) {
+				 previewSrc = `data:image/svg+xml;base64,${base64Svg}`;
+				 // Check size
+				 const MAX_SVG_DATA_URI_LENGTH = 512 * 1024;
+				 if (previewSrc.length > MAX_SVG_DATA_URI_LENGTH) {
+					 console.warn(`Generated SVG Data URI (from img src) exceeds limit (${(previewSrc.length / 1024).toFixed(1)} KB). Skipping preview.`);
+					 previewSrc = null;
+				 }
+			 } else { previewSrc = null; } // Encoding failed
+		} else { previewSrc = null; } // No valid SVG string
+
+	} catch (fetchError) {
+		console.error(`Error fetching SVG source from <img> tag: ${originalUrl}`, fetchError);
+		previewSrc = null; // Set preview to null on fetch error
+	}
+}
+// --- END SVG source check ---
+
   // --- Fetch image data URI if needed --- 
-  if (isImg && originalUrl && !originalUrl.startsWith('data:')) {
+  if (isImg && originalUrl && !originalUrl.startsWith('data:') && !isSvgSourceInImg) {
     const fetchUrl = originalUrl;
+
+	try {
+		// --- REPLACE fetchImageAsDataUri WITH createResizedPreviewDataUri ---
+		const resizedDataUri = await createResizedPreviewDataUri(fetchUrl);
+		if (resizedDataUri) {
+			previewSrc = resizedDataUri; // Use the resized preview
+			debugLog(`Successfully created resized preview for <img>: ${fetchUrl.substring(0, 60)}`);
+		} else {
+			// Keep originalUrl as previewSrc if resizing failed/skipped
+			previewSrc = originalUrl;
+			debugLog(`Using original URL as preview for <img> (resizing failed/skipped): ${fetchUrl.substring(0, 60)}`);
+		}
+		// --- END REPLACEMENT ---
+	  } catch (error) {
+
     try {
       const img = new Image();
       img.crossOrigin = "Anonymous";
@@ -971,7 +1134,11 @@ async function analyzeSingleImage(el) {
     } catch (error) {
       console.error(`Error loading image data for: ${fetchUrl.substring(0,60)}`, error);
     }
+
+
+	
   }
+}
 
   // --- Get accessibility attributes --- 
   const altAttr = isImg ? el.getAttribute('alt') : null;

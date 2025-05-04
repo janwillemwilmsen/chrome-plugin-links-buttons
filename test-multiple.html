@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Multiple Filters</title>
+  <style>body { font-family: sans-serif; } section { margin-bottom: 2em; } .case { margin-bottom: 1em; border: 1px solid #ccc; padding: 0.5em; }</style>
+</head>
+<body>
+  <h1>Test Multiple Filters</h1>
+  <p>Each case below is crafted to match a unique combination of filter criteria. Use this to verify that your plugin's filters work for all combinations.</p>
+
+  <section>
+    <h2>Buttons - All Combinations</h2>
+    <!-- Button: with text, with image, with aria, with title, with tabindex, opens in new window -->
+    <div class="case">
+      <button title="BtnTitle" aria-label="AriaBtn" tabindex="2" onclick="window.open('https://example.com')">
+        Button With All
+        <img src="https://via.placeholder.com/20" alt="BtnImg">
+      </button>
+      <span>with text, image, aria, title, tabindex, opens in new window</span>
+    </div>
+    <!-- Button: no text, with image, with aria, with title, with tabindex, does not open in new window -->
+    <div class="case">
+      <button title="BtnTitle2" aria-label="AriaBtn2" tabindex="3">
+        <img src="https://via.placeholder.com/20" alt="BtnImg2">
+      </button>
+      <span>no text, image, aria, title, tabindex, no new window</span>
+    </div>
+    <!-- Button: with text, no image, with aria, no title, with tabindex, does not open in new window -->
+    <div class="case">
+      <button aria-label="AriaBtn3" tabindex="4">Button No Image</button>
+      <span>with text, no image, aria, no title, tabindex, no new window</span>
+    </div>
+    <!-- Button: with text, no image, no aria, with title, no tabindex, does not open in new window -->
+    <div class="case">
+      <button title="BtnTitle3">Button No Aria</button>
+      <span>with text, no image, no aria, title, no tabindex, no new window</span>
+    </div>
+    <!-- Button: with text, no image, no aria, no title, with tabindex, does not open in new window -->
+    <div class="case">
+      <button tabindex="5">Button No Aria No Title</button>
+      <span>with text, no image, no aria, no title, tabindex, no new window</span>
+    </div>
+    <!-- Button: with text, no image, no aria, no title, no tabindex, does not open in new window -->
+    <div class="case">
+      <button>Button Minimal</button>
+      <span>with text, no image, no aria, no title, no tabindex, no new window</span>
+    </div>
+    <!-- Button: no text, no image, no aria, no title, no tabindex, does not open in new window -->
+    <div class="case">
+      <button></button>
+      <span>no text, no image, no aria, no title, no tabindex, no new window</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Links - All Combinations</h2>
+    <!-- Link: with text, with image, with aria, with title, with tabindex, opens in new window -->
+    <div class="case">
+      <a href="#" title="LinkTitle" aria-label="AriaLink" tabindex="1" target="_blank">
+        Link With All
+        <img src="https://via.placeholder.com/20" alt="LinkImg">
+      </a>
+      <span>with text, image, aria, title, tabindex, opens in new window</span>
+    </div>
+    <!-- Link: no text, with image, with aria, with title, with tabindex, does not open in new window -->
+    <div class="case">
+      <a href="#" title="LinkTitle2" aria-label="AriaLink2" tabindex="2">
+        <img src="https://via.placeholder.com/20" alt="LinkImg2">
+      </a>
+      <span>no text, image, aria, title, tabindex, no new window</span>
+    </div>
+    <!-- Link: with text, no image, with aria, no title, with tabindex, does not open in new window -->
+    <div class="case">
+      <a href="#" aria-label="AriaLink3" tabindex="3">Link No Image</a>
+      <span>with text, no image, aria, no title, tabindex, no new window</span>
+    </div>
+    <!-- Link: with text, no image, no aria, with title, no tabindex, does not open in new window -->
+    <div class="case">
+      <a href="#" title="LinkTitle3">Link No Aria</a>
+      <span>with text, no image, no aria, title, no tabindex, no new window</span>
+    </div>
+    <!-- Link: with text, no image, no aria, no title, with tabindex, does not open in new window -->
+    <div class="case">
+      <a href="#" tabindex="4">Link No Aria No Title</a>
+      <span>with text, no image, no aria, no title, tabindex, no new window</span>
+    </div>
+    <!-- Link: with text, no image, no aria, no title, no tabindex, does not open in new window -->
+    <div class="case">
+      <a href="#">Link Minimal</a>
+      <span>with text, no image, no aria, no title, no tabindex, no new window</span>
+    </div>
+    <!-- Link: no text, no image, no aria, no title, no tabindex, does not open in new window -->
+    <div class="case">
+      <a href="#"></a>
+      <span>no text, no image, no aria, no title, no tabindex, no new window</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>SVG and ARIA Variants</h2>
+    <!-- Button with SVG, aria, title, tabindex -->
+    <div class="case">
+      <button title="SVGBtnTitle" aria-label="SVGBtnAria" tabindex="6">
+        <svg width="20" height="20" aria-label="SVG in Button"><circle cx="10" cy="10" r="8" fill="blue"/></svg>
+      </button>
+      <span>button, svg, aria, title, tabindex</span>
+    </div>
+    <!-- Link with SVG, aria, title, tabindex, opens in new window -->
+    <div class="case">
+      <a href="#" title="SVGLinkTitle" aria-label="SVGLinkAria" tabindex="7" target="_blank">
+        <svg width="20" height="20" aria-label="SVG in Link"><rect width="16" height="16" fill="red"/></svg>
+      </a>
+      <span>link, svg, aria, title, tabindex, opens in new window</span>
+    </div>
+    <!-- Button with SVG, no aria, no title, no tabindex -->
+    <div class="case">
+      <button>
+        <svg width="20" height="20"><circle cx="10" cy="10" r="8" fill="green"/></svg>
+      </button>
+      <span>button, svg, no aria, no title, no tabindex</span>
+    </div>
+    <!-- Link with SVG, no aria, no title, no tabindex -->
+    <div class="case">
+      <a href="#">
+        <svg width="20" height="20"><rect width="16" height="16" fill="orange"/></svg>
+      </a>
+      <span>link, svg, no aria, no title, no tabindex</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Extreme/Edge Cases</h2>
+    <!-- Button with all attributes and no text or image -->
+    <div class="case">
+      <button title="EdgeBtnTitle" aria-label="EdgeBtnAria" tabindex="8" onclick="window.open('https://example.com')"></button>
+      <span>button, no text, no image, aria, title, tabindex, opens in new window</span>
+    </div>
+    <!-- Link with all attributes and no text or image -->
+    <div class="case">
+      <a href="#" title="EdgeLinkTitle" aria-label="EdgeLinkAria" tabindex="9" target="_blank"></a>
+      <span>link, no text, no image, aria, title, tabindex, opens in new window</span>
+    </div>
+  </section>
+  <section>
+    <h2>Nested Elements</h2>
+    <!-- Link inside a div -->
+    <div class="case">
+      <div><a href="#" aria-label="NestedLink">Nested Link</a></div>
+      <span>link inside div</span>
+    </div>
+    <!-- Button inside a span -->
+    <div class="case">
+      <span><button aria-label="NestedBtn">Nested Button</button></span>
+      <span>button inside span</span>
+    </div>
+    <!-- Link inside a button (invalid, but edge) -->
+    <div class="case">
+      <button>Button with <a href="#">Link Inside</a></button>
+      <span>link inside button (invalid HTML)</span>
+    </div>
+    <!-- Button inside a link (invalid, but edge) -->
+    <div class="case">
+      <a href="#">Link with <button>Button Inside</button></a>
+      <span>button inside link (invalid HTML)</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Shadow DOM Cases</h2>
+    <div class="case" id="shadow-host-1"></div>
+    <div class="case" id="shadow-host-2"></div>
+    <script>
+      // Shadow DOM with a link and image
+      const shadow1 = document.getElementById('shadow-host-1').attachShadow({mode:'open'});
+      shadow1.innerHTML = `<a href="#" aria-label="ShadowLink"><img src='https://via.placeholder.com/20' alt='ShadowImg'>Shadow Link</a>`;
+      // Shadow DOM with a button and SVG
+      const shadow2 = document.getElementById('shadow-host-2').attachShadow({mode:'open'});
+      shadow2.innerHTML = `<button aria-label='ShadowBtn'><svg width='20' height='20'><circle cx='10' cy='10' r='8' fill='purple'/></svg>Shadow Button</button>`;
+    </script>
+    <span>Shadow DOM: link+image, button+svg</span>
+  </section>
+
+  <section>
+    <h2>ARIA Labelledby & Describedby</h2>
+    <div class="case">
+      <span id="lbl1">Labelled By Text</span>
+      <span id="desc1">Described By Text</span>
+      <a href="#" aria-labelledby="lbl1" aria-describedby="desc1">Link with ARIA Labelledby/Describedby</a>
+      <span>link with aria-labelledby and aria-describedby</span>
+    </div>
+    <div class="case">
+      <button aria-labelledby="lbl1" aria-describedby="desc1">Button with ARIA Labelledby/Describedby</button>
+      <span>button with aria-labelledby and aria-describedby</span>
+    </div>
+    <div class="case">
+      <a href="#" aria-labelledby="lbl1">Link with ARIA Labelledby only</a>
+      <span>link with aria-labelledby only</span>
+    </div>
+    <div class="case">
+      <button aria-describedby="desc1">Button with ARIA Describedby only</button>
+      <span>button with aria-describedby only</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>aria-hidden Block</h2>
+    <div class="case" aria-hidden="true">
+      <a href="#">Hidden Link</a>
+      <a href="#"><img src="https://via.placeholder.com/20" alt="HiddenImg">Hidden Link with Image</a>
+      <span>aria-hidden block: links with and without images</span>
+    </div>
+  </section>
+
+</body>
+</html>
