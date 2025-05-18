@@ -1,11 +1,12 @@
+const DEBUG = false;
 // Helper for styled console logs that stand out
 function debugLog(message, data = null) {
-  console.log(
-    `%c IMAGE DEBUGGER %c ${message}`,
-    'background: #4285f4; color: white; padding: 2px 4px; border-radius: 2px;',
-    'color: #4285f4; font-weight: bold;',
-    data || ''
-  );
+  if (DEBUG) console.log(
+      `%c IMAGE DEBUGGER %c ${message}`,
+      'background: #4285f4; color: white; padding: 2px 4px; border-radius: 2px;',
+      'color: #4285f4; font-weight: bold;',
+      data || ''
+    );
 }
 
 // Helper function to recursively find elements including those in shadow DOM
@@ -105,58 +106,58 @@ function findAncestorLinkElementRecursive(element, depth = 0) {
   if (!element || depth > 10) return null;
   
   // Debug the element we're checking
-  console.log(`[DEBUG findAncestorLink] Checking element at depth ${depth}:`, 
+  if (DEBUG) console.log(`[DEBUG findAncestorLink] Checking element at depth ${depth}:`, 
               element.tagName ? element.tagName.toLowerCase() : 'unknown', 
               element.getAttribute ? (element.getAttribute('role') || 'no role') : 'no getAttribute');
   
   // Check if the current element is a link or button
   const tagName = element.tagName ? element.tagName.toLowerCase() : null;
   if (tagName === 'a' || tagName === 'button' || element.getAttribute('role') === 'link' || element.getAttribute('role') === 'button') {
-    console.log(`[DEBUG findAncestorLink] Found link element:`, element.outerHTML?.substring(0, 100) + '...');
+    if (DEBUG) console.log(`[DEBUG findAncestorLink] Found link element:`, element.outerHTML?.substring(0, 100) + '...');
     return element; // Return the element itself
   }
   
   // Continue checking parent even if this element has aria-hidden="true" 
   // This ensures we find link relationships even for decorative/hidden elements
   if (element.parentElement && element.parentElement.nodeType === Node.ELEMENT_NODE) {
-     console.log(`[DEBUG findAncestorLink] Moving to parent:`, 
+     if (DEBUG) console.log(`[DEBUG findAncestorLink] Moving to parent:`, 
                  element.parentElement.tagName ? element.parentElement.tagName.toLowerCase() : 'unknown');
      return findAncestorLinkElementRecursive(element.parentElement, depth + 1);
   }
   
-  console.log(`[DEBUG findAncestorLink] No link found, reached end of traversal`);
+  if (DEBUG) console.log(`[DEBUG findAncestorLink] No link found, reached end of traversal`);
   return null;
 }
 
 // Helper: Get details from a link/button element (separated logic)
 function getLinkElementDetails(linkElement) {
     // Special debug for link element
-    console.log(`[DEBUG getLinkElementDetails] Link element:`, linkElement ? linkElement.outerHTML?.substring(0, 100) + '...' : 'null');
+    if (DEBUG) console.log(`[DEBUG getLinkElementDetails] Link element:`, linkElement ? linkElement.outerHTML?.substring(0, 100) + '...' : 'null');
     
     if (!linkElement) {
-        console.log(`[DEBUG getLinkElementDetails] No link element found`);
+        if (DEBUG) console.log(`[DEBUG getLinkElementDetails] No link element found`);
         return { isLink: false };
     }
     
     // Add debug to see DOM properties of the element
-    console.log(`[DEBUG getLinkElementDetails] linkElement.nodeType:`, linkElement.nodeType);
-    console.log(`[DEBUG getLinkElementDetails] linkElement type:`, typeof linkElement);
+    if (DEBUG) console.log(`[DEBUG getLinkElementDetails] linkElement.nodeType:`, linkElement.nodeType);
+    if (DEBUG) console.log(`[DEBUG getLinkElementDetails] linkElement type:`, typeof linkElement);
     
     try {
         const tagName = linkElement.tagName ? linkElement.tagName.toLowerCase() : null;
-        console.log(`[DEBUG getLinkElementDetails] tagName=${tagName}`);
+        if (DEBUG) console.log(`[DEBUG getLinkElementDetails] tagName=${tagName}`);
         
         const role = linkElement.getAttribute ? linkElement.getAttribute('role') : null;
-        console.log(`[DEBUG getLinkElementDetails] role=${role}`);
+        if (DEBUG) console.log(`[DEBUG getLinkElementDetails] role=${role}`);
         
         // More reliable check - if tagName is 'a', always consider it a link
         const isLink = tagName === 'a' || tagName === 'button' || role === 'link' || role === 'button';
         
         // Add more debug 
-        console.log(`[DEBUG getLinkElementDetails] tagName=${tagName}, role=${role}, isLink=${isLink}`);
+        if (DEBUG) console.log(`[DEBUG getLinkElementDetails] tagName=${tagName}, role=${role}, isLink=${isLink}`);
         
         if (!isLink) {
-            console.log(`[DEBUG getLinkElementDetails] Not a link element despite finding an ancestor`);
+            if (DEBUG) console.log(`[DEBUG getLinkElementDetails] Not a link element despite finding an ancestor`);
             return { isLink: false };
         }
 
@@ -180,7 +181,7 @@ function getLinkElementDetails(linkElement) {
         const linkDescribedByText = getTextForAriaIds(linkDescribedByIds, ownerDoc);
         
         // Add final debug
-        console.log(`[DEBUG getLinkElementDetails] Result:`, {
+        if (DEBUG) console.log(`[DEBUG getLinkElementDetails] Result:`, {
             isLink,
             tagName,
             role,
@@ -580,20 +581,20 @@ async function fetchAndProcessSvgUse(svgElement) {
         if (!fragment) return null;
         
         const fullUrl = new URL(url, window.location.href).href;
-      console.log('Fetching SVG from:', fullUrl);
+      if (DEBUG) console.log('Fetching SVG from:', fullUrl);
         
         const response = await fetch(fullUrl);
         if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
         
         const svgText = await response.text();
-      console.log('Fetched SVG content:', svgText.substring(0, 100) + '...');
+      if (DEBUG) console.log('Fetched SVG content:', svgText.substring(0, 100) + '...');
       
         const parser = new DOMParser();
         const externalDoc = parser.parseFromString(svgText, 'image/svg+xml');
         
         const referencedElement = externalDoc.getElementById(fragment);
       if (!referencedElement) {
-          console.log('Referenced element not found:', fragment);
+          if (DEBUG) console.log('Referenced element not found:', fragment);
           return null;
       }
       
@@ -607,7 +608,7 @@ async function fetchAndProcessSvgUse(svgElement) {
             newSvg.appendChild(referencedElement.cloneNode(true));
         }
         
-      console.log('Processed SVG:', newSvg.outerHTML);
+      if (DEBUG) console.log('Processed SVG:', newSvg.outerHTML);
         return newSvg.outerHTML;
     } catch (error) {
       console.error('Error processing SVG use:', error);
@@ -717,7 +718,7 @@ async function createResizedPreviewDataUri(url) {
 
 // Add these helper functions back if they're missing
 async function fetchImageAsDataUri(url) {
-	console.log('Fetching image as Data URI:', url);
+	if (DEBUG) console.log('Fetching image as Data URI:', url);
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -1502,7 +1503,7 @@ function inspectImage(imageId) {
       inspect(image);
       return true;
     } else {
-      console.log('Inspect function not available');
+      if (DEBUG) console.log('Inspect function not available');
     }
   }
   return false;
@@ -1519,7 +1520,7 @@ window.addEventListener('message', async function(event) {
 
   // Check if it's a request for the image analyzer
   if (request.type === 'IMAGE_ANALYZER_REQUEST') {
-    console.log('images.js (page context) received request:', request.action);
+    if (DEBUG) console.log('images.js (page context) received request:', request.action);
     let responseData = null;
     let success = false;
     let error = null;
@@ -1636,7 +1637,7 @@ function safePostMessage(data, targetOrigin = '*') { // Default to wildcard for 
 
 // Make the main function async
 async function findBackgroundImages() {
-  console.log("🔍 Starting comprehensive background image search...");
+  if (DEBUG) console.log("🔍 Starting comprehensive background image search...");
   const backgroundImages = [];
   const uniqueUrls = new Set();
   let idCounter = 0;
@@ -1686,7 +1687,7 @@ async function findBackgroundImages() {
   await processAllElements();
   await processStylesheets();
 
-  console.log(`🔍 Found ${backgroundImages.length} unique CSS background images`);
+  if (DEBUG) console.log(`🔍 Found ${backgroundImages.length} unique CSS background images`);
   return backgroundImages;
 }
 
@@ -1700,20 +1701,20 @@ function findSvgSymbolById(symbolId, rootNode = document) {
   try {
     // 1. Check if any <symbol> elements exist at all (for debugging)
     const allSymbols = rootNode.querySelectorAll('symbol');
-    console.log(`Found ${allSymbols.length} symbol elements in document`);
+    if (DEBUG) console.log(`Found ${allSymbols.length} symbol elements in document`);
     
     // 2. Check for sprites/icons that might have partial ID matches
     if (symbolId.includes('Arrow') || symbolId.includes('Icon')) {
       const partialMatches = Array.from(rootNode.querySelectorAll('symbol[id*="Arrow"], symbol[id*="Icon"]'));
-      console.log(`Found ${partialMatches.length} partially matching symbols:`, 
+      if (DEBUG) console.log(`Found ${partialMatches.length} partially matching symbols:`, 
                 partialMatches.map(el => el.id).join(', '));
       
       // 3. NEW: If this is an arrow icon and we found no matches, look for similar icons
       if (symbolId.includes('Arrow') && partialMatches.length === 0) {
-        console.log('Looking for similar arrow icons in navigation...');
+        if (DEBUG) console.log('Looking for similar arrow icons in navigation...');
         const similarArrows = extractArrowPathFromSimilarIcons();
         if (similarArrows) {
-          console.log(`Found ${similarArrows.length} similar arrow icons without use tags`);
+          if (DEBUG) console.log(`Found ${similarArrows.length} similar arrow icons without use tags`);
           // Create a synthetic symbol based on the first found arrow
           const syntheticSymbol = document.createElementNS('http://www.w3.org/2000/svg', 'symbol');
           syntheticSymbol.id = symbolId;
@@ -1739,7 +1740,7 @@ function findSvgSymbolById(symbolId, rootNode = document) {
     // 4. As a last resort, check if there's a <use> tag that references this symbol
     const useElements = rootNode.querySelectorAll('use[href="#' + symbolId + '"]');
     if (useElements.length > 0) {
-      console.log(`Found ${useElements.length} use elements referencing #${symbolId}`);
+      if (DEBUG) console.log(`Found ${useElements.length} use elements referencing #${symbolId}`);
     }
   } catch(e) {
     console.warn('Error in symbol search:', e);
