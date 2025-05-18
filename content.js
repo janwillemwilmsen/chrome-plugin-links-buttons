@@ -82,6 +82,67 @@ function getAllInteractiveElements(root = document) {
   return findAllElementsRecursive(selector, root);
 }
 
+
+// Determine the clickable region for an element. This merges the element's
+// bounding box with any ::before/::after (or :before/:after) pseudo-elements
+// that render visible content and allow pointer events. When available,
+// getBoxQuads provides the exact bounds of those pseudo elements.
+function getEffectiveClickableRect(el) {
+  const base = el.getBoundingClientRect();
+  let minX = base.left;
+  let minY = base.top;
+  let maxX = base.right;
+  let maxY = base.bottom;
+  // Check both CSS3 (::before/::after) and CSS2 (:before/:after) notations
+  const pseudos = ['::before', '::after', ':before', ':after'];
+  pseudos.forEach(pseudo => {
+    const style = window.getComputedStyle(el, pseudo);
+    if (!style || style.content === 'none' || style.content === '""' || style.pointerEvents === 'none') {
+      return;
+    }
+    if (typeof el.getBoxQuads === 'function') {
+      try {
+        const quads = el.getBoxQuads({ pseudoElement: pseudo });
+        quads.forEach(q => {
+          const r = q.getBounds();
+          if (r.left < minX) minX = r.left;
+          if (r.top < minY) minY = r.top;
+          if (r.right > maxX) maxX = r.right;
+          if (r.bottom > maxY) maxY = r.bottom;
+        });
+      } catch (e) {
+        if (DEBUG) console.warn('Failed to get box quads for', pseudo, e);
+      }
+    }
+  });
+  return {
+    left: minX,
+    top: minY,
+    right: maxX,
+    bottom: maxY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+// Check if the element or its pseudo-elements use absolute positioning.
+// Both CSS3 (::before/::after) and CSS2 (:before/:after) syntaxes are examined.
+function hasAbsolutePosition(el) {
+  const baseStyle = window.getComputedStyle(el);
+  if (baseStyle.position === 'absolute') {
+    return true;
+  }
+  const pseudos = ['::before', '::after', ':before', ':after'];
+  for (const pseudo of pseudos) {
+    const style = window.getComputedStyle(el, pseudo);
+    if (!style) continue;
+    if (style.position === 'absolute' && style.content && style.content !== 'none' && style.content !== '""') {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function extractElementData(el, sequentialId, isButton) { 
   if (!el || !el.tagName) return { type: '', linkUrl: '', text: '', slotContent: '', images: [] };
   let tag = el.tagName.toLowerCase();
@@ -286,6 +347,7 @@ async function extractElementData(el, sequentialId, isButton) {
   let rolePresentation = (tag === 'img') ? (el.getAttribute('role') === 'presentation' || el.getAttribute('role') === 'none') : false;
   // Outer HTML
   let outerHTML = el.outerHTML;
+  const effectiveRect = getEffectiveClickableRect(el);
   return {
     tag,
     id,
@@ -308,10 +370,43 @@ async function extractElementData(el, sequentialId, isButton) {
     hasShadowDom,
     slots: slots.map(n => n.textContent ? n.textContent.trim() : ''),
     images,
+    effectiveRect: effectiveRect,
+    hasAbsolutePosition: hasAbsolutePosition(el),
     sequentialId: sequentialId, // Include the sequential ID
     isButton: isButton // Include the isButton flag (optional, but consistent)
   };
 }
+
+// Gather basic data for an absolutely positioned element.
+async function analyzeAbsoluteElement(el) {
+  const html = el.innerHTML;
+  const text = el.textContent ? el.textContent.trim() : '';
+  let images = [];
+  if (typeof analyzeSingleImage === 'function') {
+    const imgs = findAllElementsRecursive('img,svg', el);
+    if (imgs.length) {
+      const results = await Promise.all(imgs.map(img => analyzeSingleImage(img)));
+      images = results.flat().filter(Boolean);
+    }
+  }
+  return { html, text, images };
+}
+
+// Get data for all links/buttons that use absolute positioning.
+async function getAbsoluteLinksButtonsData() {
+  const all = getAllInteractiveElements();
+  const absEls = all.filter(el => isLinkOrButton(el) && hasAbsolutePosition(el));
+  const data = [];
+  for (const el of absEls) {
+    data.push(await analyzeAbsoluteElement(el));
+  }
+  return data;
+}
+
+// Expose helpers globally so the extension or console can call them directly
+window.hasAbsolutePosition = hasAbsolutePosition;
+window.analyzeAbsoluteElement = analyzeAbsoluteElement;
+window.getAbsoluteLinksButtonsData = getAbsoluteLinksButtonsData;
 
 function gatherLinksAndButtons() {
   const all = getAllInteractiveElements();
