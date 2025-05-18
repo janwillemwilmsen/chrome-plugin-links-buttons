@@ -93,8 +93,11 @@ function getEffectiveClickableRect(el) {
   let minY = base.top;
   let maxX = base.right;
   let maxY = base.bottom;
-  // Iterate over pseudo-elements, handling both CSS2 ':before/:after'
-  // and CSS3 '::before/::after' notations.
+// <<<<<<< codex/document-clickable-region-behavior-with-pseudo-elements
+// =======
+//   // Iterate over pseudo-elements, handling both CSS2 ':before/:after'
+//   // and CSS3 '::before/::after' notations.
+// >>>>>>> main
   ['::before', ':before', '::after', ':after'].forEach(pseudo => {
     const style = window.getComputedStyle(el, pseudo);
     if (!style || style.content === 'none' || style.content === '""' || style.pointerEvents === 'none') {
@@ -125,15 +128,25 @@ function getEffectiveClickableRect(el) {
   };
 }
 
+// <<<<<<< codex/document-clickable-region-behavior-with-pseudo-elements
+// // Check if an element or its pseudo-elements use absolute positioning.
+// // Iterates over both CSS3 '::before/::after' and CSS2 ':before/:after'
+// // notations and verifies that visible content is present.
 // =======
-// Check if an element or its ::before/::after pseudo-elements
-// use `position: absolute` with visible content.
+// // =======
+// // Check if an element or its ::before/::after pseudo-elements
+// // use `position: absolute` with visible content.
+// >>>>>>> main
 function hasAbsolutePosition(el) {
   if (!el || !el.tagName) return false;
   try {
     const style = window.getComputedStyle(el);
     if (style.position === 'absolute') return true;
-    for (const pseudo of ['::before', '::after']) {
+// <<<<<<< codex/document-clickable-region-behavior-with-pseudo-elements
+//     for (const pseudo of ['::before', ':before', '::after', ':after']) {
+// =======
+//     for (const pseudo of ['::before', '::after']) {
+// >>>>>>> main
       const ps = window.getComputedStyle(el, pseudo);
       if (ps && ps.position === 'absolute' && ps.content && ps.content !== 'none' && ps.content !== '""') {
         return true;
@@ -145,8 +158,12 @@ function hasAbsolutePosition(el) {
   return false;
 }
 
-// Analyze an element that has absolute positioning. Returns HTML,
-// text content and any images/SVGs processed via existing helpers.
+// <<<<<<< codex/document-clickable-region-behavior-with-pseudo-elements
+// // Analyze absolutely positioned elements to extract their inner HTML, text, and images.
+// =======
+// // Analyze an element that has absolute positioning. Returns HTML,
+// // text content and any images/SVGs processed via existing helpers.
+// >>>>>>> main
 async function analyzeAbsoluteElement(el) {
   if (!hasAbsolutePosition(el)) return null;
   const html = el.innerHTML;
@@ -174,8 +191,12 @@ async function analyzeAbsoluteElement(el) {
   return { html, text, images };
 }
 
-// Gather all absolutely positioned links or buttons and
-// return processed data using the above helpers.
+// <<<<<<< codex/document-clickable-region-behavior-with-pseudo-elements
+// // Gather absolutely positioned links or buttons using the helper above.
+// =======
+// // Gather all absolutely positioned links or buttons and
+// // return processed data using the above helpers.
+// >>>>>>> main
 async function getAbsoluteLinksButtonsData(root = document) {
   const all = getAllInteractiveElements(root);
   const absoluteEls = all.filter(hasAbsolutePosition);
@@ -187,15 +208,22 @@ async function getAbsoluteLinksButtonsData(root = document) {
   return results;
 }
 
-// Expose helpers globally for easy usage
+// <<<<<<< codex/document-clickable-region-behavior-with-pseudo-elements
+// // Expose these helpers globally for convenience.
+// =======
+// // Expose helpers globally for easy usage
+// >>>>>>> main
 if (typeof window !== 'undefined') {
   window.getAbsoluteLinksButtonsData = getAbsoluteLinksButtonsData;
   window.analyzeAbsoluteElement = analyzeAbsoluteElement;
   window.hasAbsolutePosition = hasAbsolutePosition;
 }
 
+// <<<<<<< codex/document-clickable-region-behavior-with-pseudo-elements
+// =======
 
 
+// >>>>>>> main
 async function extractElementData(el, sequentialId, isButton) { 
   if (!el || !el.tagName) return { type: '', linkUrl: '', text: '', slotContent: '', images: [] };
   let tag = el.tagName.toLowerCase();
