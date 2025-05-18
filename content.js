@@ -125,7 +125,7 @@ function getEffectiveClickableRect(el) {
   };
 }
 
-=======
+// =======
 // Check if an element or its ::before/::after pseudo-elements
 // use `position: absolute` with visible content.
 function hasAbsolutePosition(el) {
