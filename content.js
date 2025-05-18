@@ -143,9 +143,9 @@ function hasAbsolutePosition(el) {
     const style = window.getComputedStyle(el);
     if (style.position === 'absolute') return true;
 // <<<<<<< codex/document-clickable-region-behavior-with-pseudo-elements
-//     for (const pseudo of ['::before', ':before', '::after', ':after']) {
+    for (const pseudo of ['::before', ':before', '::after', ':after']) {
 // =======
-//     for (const pseudo of ['::before', '::after']) {
+    // for (const pseudo of ['::before', '::after']) {
 // >>>>>>> main
       const ps = window.getComputedStyle(el, pseudo);
       if (ps && ps.position === 'absolute' && ps.content && ps.content !== 'none' && ps.content !== '""') {
