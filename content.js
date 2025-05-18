@@ -83,6 +83,49 @@ function getAllInteractiveElements(root = document) {
 }
 
 
+// Determine clickable region by merging the element box with
+// any ::before/::after pseudo-elements that render visible content
+// and have pointer-events enabled. getBoxQuads is used to obtain
+// the pseudo-element bounds when available.
+function getEffectiveClickableRect(el) {
+  const base = el.getBoundingClientRect();
+  let minX = base.left;
+  let minY = base.top;
+  let maxX = base.right;
+  let maxY = base.bottom;
+  // Iterate over pseudo-elements, handling both CSS2 ':before/:after'
+  // and CSS3 '::before/::after' notations.
+  ['::before', ':before', '::after', ':after'].forEach(pseudo => {
+    const style = window.getComputedStyle(el, pseudo);
+    if (!style || style.content === 'none' || style.content === '""' || style.pointerEvents === 'none') {
+      return;
+    }
+    if (typeof el.getBoxQuads === 'function') {
+      try {
+        const quads = el.getBoxQuads({ pseudoElement: pseudo });
+        quads.forEach(q => {
+          const r = q.getBounds();
+          if (r.left < minX) minX = r.left;
+          if (r.top < minY) minY = r.top;
+          if (r.right > maxX) maxX = r.right;
+          if (r.bottom > maxY) maxY = r.bottom;
+        });
+      } catch (e) {
+        if (DEBUG) console.warn('Failed to get box quads for', pseudo, e);
+      }
+    }
+  });
+  return {
+    left: minX,
+    top: minY,
+    right: maxX,
+    bottom: maxY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+=======
 // Check if an element or its ::before/::after pseudo-elements
 // use `position: absolute` with visible content.
 function hasAbsolutePosition(el) {
@@ -357,6 +400,7 @@ async function extractElementData(el, sequentialId, isButton) {
   let rolePresentation = (tag === 'img') ? (el.getAttribute('role') === 'presentation' || el.getAttribute('role') === 'none') : false;
   // Outer HTML
   let outerHTML = el.outerHTML;
+  const effectiveRect = getEffectiveClickableRect(el);
   return {
     tag,
     id,
@@ -379,6 +423,7 @@ async function extractElementData(el, sequentialId, isButton) {
     hasShadowDom,
     slots: slots.map(n => n.textContent ? n.textContent.trim() : ''),
     images,
+    effectiveRect: effectiveRect,
     sequentialId: sequentialId, // Include the sequential ID
     isButton: isButton // Include the isButton flag (optional, but consistent)
   };
