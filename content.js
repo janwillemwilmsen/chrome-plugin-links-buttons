@@ -82,6 +82,114 @@ function getAllInteractiveElements(root = document) {
   return findAllElementsRecursive(selector, root);
 }
 
+
+// Determine clickable region by merging the element box with
+// any ::before/::after pseudo-elements that render visible content
+// and have pointer-events enabled. getBoxQuads is used to obtain
+// the pseudo-element bounds when available.
+function getEffectiveClickableRect(el) {
+  const base = el.getBoundingClientRect();
+  let minX = base.left;
+  let minY = base.top;
+  let maxX = base.right;
+  let maxY = base.bottom;
+  ['::before', ':before', '::after', ':after'].forEach(pseudo => {
+    const style = window.getComputedStyle(el, pseudo);
+    if (!style || style.content === 'none' || style.content === '""' || style.pointerEvents === 'none') {
+      return;
+    }
+    if (typeof el.getBoxQuads === 'function') {
+      try {
+        const quads = el.getBoxQuads({ pseudoElement: pseudo });
+        quads.forEach(q => {
+          const r = q.getBounds();
+          if (r.left < minX) minX = r.left;
+          if (r.top < minY) minY = r.top;
+          if (r.right > maxX) maxX = r.right;
+          if (r.bottom > maxY) maxY = r.bottom;
+        });
+      } catch (e) {
+        if (DEBUG) console.warn('Failed to get box quads for', pseudo, e);
+      }
+    }
+  });
+  return {
+    left: minX,
+    top: minY,
+    right: maxX,
+    bottom: maxY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+// Check if an element or its pseudo-elements use absolute positioning.
+// Iterates over both CSS3 '::before/::after' and CSS2 ':before/:after'
+// notations and verifies that visible content is present.
+function hasAbsolutePosition(el) {
+  if (!el || !el.tagName) return false;
+  try {
+    const style = window.getComputedStyle(el);
+    if (style.position === 'absolute') return true;
+    for (const pseudo of ['::before', ':before', '::after', ':after']) {
+      const ps = window.getComputedStyle(el, pseudo);
+      if (ps && ps.position === 'absolute' && ps.content && ps.content !== 'none' && ps.content !== '""') {
+        return true;
+      }
+    }
+  } catch (e) {
+    if (DEBUG) console.warn('Error checking absolute position', e);
+  }
+  return false;
+}
+
+// Analyze absolutely positioned elements to extract their inner HTML, text, and images.
+async function analyzeAbsoluteElement(el) {
+  if (!hasAbsolutePosition(el)) return null;
+  const html = el.innerHTML;
+  const text = el.textContent ? el.textContent.trim() : '';
+  let images = [];
+  try {
+    if (typeof analyzeSingleImage === 'function') {
+      const imageElements = findAllElementsRecursive('img,svg', el);
+      if (imageElements.length) {
+        const results = await Promise.all(imageElements.map(img => analyzeSingleImage(img)));
+        images = results.flat().filter(Boolean);
+      }
+    } else {
+      el.querySelectorAll('img,svg').forEach(img => {
+        if (img.tagName && img.tagName.toLowerCase() === 'img') {
+          images.push({ type: 'img', src: img.src, alt: img.getAttribute('alt'), title: img.getAttribute('title') });
+        } else if (img.tagName && img.tagName.toLowerCase() === 'svg') {
+          images.push({ type: 'svg', outerHTML: img.outerHTML });
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Error analyzing absolute element images:', e);
+  }
+  return { html, text, images };
+}
+
+// Gather absolutely positioned links or buttons using the helper above.
+async function getAbsoluteLinksButtonsData(root = document) {
+  const all = getAllInteractiveElements(root);
+  const absoluteEls = all.filter(hasAbsolutePosition);
+  const results = [];
+  for (const el of absoluteEls) {
+    const data = await analyzeAbsoluteElement(el);
+    if (data) results.push(data);
+  }
+  return results;
+}
+
+// Expose these helpers globally for convenience.
+if (typeof window !== 'undefined') {
+  window.getAbsoluteLinksButtonsData = getAbsoluteLinksButtonsData;
+  window.analyzeAbsoluteElement = analyzeAbsoluteElement;
+  window.hasAbsolutePosition = hasAbsolutePosition;
+}
+
 async function extractElementData(el, sequentialId, isButton) { 
   if (!el || !el.tagName) return { type: '', linkUrl: '', text: '', slotContent: '', images: [] };
   let tag = el.tagName.toLowerCase();
@@ -286,6 +394,7 @@ async function extractElementData(el, sequentialId, isButton) {
   let rolePresentation = (tag === 'img') ? (el.getAttribute('role') === 'presentation' || el.getAttribute('role') === 'none') : false;
   // Outer HTML
   let outerHTML = el.outerHTML;
+  const effectiveRect = getEffectiveClickableRect(el);
   return {
     tag,
     id,
@@ -308,6 +417,7 @@ async function extractElementData(el, sequentialId, isButton) {
     hasShadowDom,
     slots: slots.map(n => n.textContent ? n.textContent.trim() : ''),
     images,
+    effectiveRect: effectiveRect,
     sequentialId: sequentialId, // Include the sequential ID
     isButton: isButton // Include the isButton flag (optional, but consistent)
   };
