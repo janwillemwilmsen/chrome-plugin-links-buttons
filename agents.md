@@ -1,6 +1,15 @@
-The idea behind the Chrome Plugin is to inspect all links and buttons on a webpage. The plugin needs to open upon clicking the icon in the chrome pluginbar. It needs to close upon clicking the icon again. It needs to reload upon navigating to a different page. It needs to have a reload button (for when images use lazy loading, scrolling to bottom of page, and reloading the plugin would help). There would be filters, filters for Buttons/Links/Both + filter for Items with text, items without text, Items with and without image. Items with and without aria-*attribute. Items with and without title. Items with and without tabindex, items (links or buttons) that open in new window or not.  There needs to be a reset filter button. 
+The idea behind the Chrome Plugin is to inspect all links and buttons on a webpage. 
+
+The plugin needs to open upon clicking the icon in the chrome pluginbar. It needs to close upon clicking the icon again. It needs to reload upon navigating to a different page. It needs to have a reload button (for when images use lazy loading, scrolling to bottom of page, and reloading the plugin would help). 
+
+There would be filters, filters for Buttons/Links/Both + filter for Items with text, items without text, Items with and without image. Items with and without aria-*attribute. Items with and without title. Items with and without tabindex, items (links or buttons) that open in new window or not.  There needs to be a reset filter button. 
+
 In the list, details of the links and/or buttons(text, openNewWindow, aria-label, aria-hidden true, the image, or svg, aria-labelledby text, aria-describedBy text, href, title,  and other important accessibility attributes) would be logged. On each items there would be a button to inspect the html of the element, and a button to scroll to the element. 
-I think i want to start by indexing all button and link elements, and html elements that have are role button or role link. Saving all attributes of the items, getting the CSS of the items - INCLUDING pseudo CSS classes, for CSS2 and CSS3, checking if items are in Shadow Dom, checking if items are in a slot. Besides saving the attributes and css, there also would need to be a check for javascript click handler on the element. (at east I think I need this, in order for SPA or other dynamic framework code). 
+
+I think I want to start by indexing all button and link elements, and html elements that have are role button or role link. 
+Storing all attributes of the items AND getting the CSS of the items - INCLUDING pseudo CSS classes, for CSS2 and CSS3, checking if items are in Shadow Dom, checking if items are in a slot. Besides saving the attributes and css, there also would need to be a check for javascript click handler on the element. (at east I think I need this, in order for SPA or other dynamic framework code). 
+In order to make functions to analyse specific cases, boolean values for attributes and properties would be added to each item. For exampel has***Attribute***=true / has***Attribute***=false. If a value is true, execute the function that analyzes the attribute, and process its data. 
+
 And below the list of links/buttons there would be a faq part, it uses a json file to many the content of the faqs.
 
 
