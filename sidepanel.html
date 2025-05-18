@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Links & Buttons Finder</title>
+  <style>
+	li > * {
+    vertical-align: text-top;
+}
+ body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f5f5f5;
+      font-weight: normal;
+    font-family: Arial, Verdana, sans-serif;
+    font-size: max(.9rem, 14px);
+    }
+    
+    .section {
+      background: white;
+      padding: 16px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      color: #333;
+    }
+    
+    details {
+      margin-bottom: 16px;
+    }
+    
+    summary {
+      font-weight: bold;
+      cursor: pointer;
+      padding: 8px 0;
+      color: #1b76c1;
+    }
+
+    #results { padding: 1em; }
+    .item { background: #fff; margin-bottom: 0.5em; padding: 0.5em; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .type { font-size: 0.9em; color: #888; }
+    .url { color: #1a0dab; word-break: break-all; }
+    .text { font-weight: bold; }
+    .image-preview { max-width: 32px; max-height: 32px; vertical-align: middle; margin-right: 0.5em; }
+
+    .image-thumb { width: 40px; height: 40px; min-width: 40px; 
+      overflow: hidden; border: 1px solid #ddd; border-radius: 4px; 
+      background: linear-gradient(to bottom right, #f8f8f8, #b1b0b0); 
+      /* background: #f9f9f9; */ 
+      /* background-image: linear-gradient(45deg, #ccc 5%, transparent 75%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); */
+       /* background-position :0 0, 0 10px, 10px -10px, -10px 0px; */ 
+       /* background-size: 20px 20px; */ 
+      display: flex; align-items: center; justify-content: center; }
+    
+    .image-thumb img {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
+    /* FAQ Styles */
+    .faq-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .faq-item {
+      background: white;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .faq-question {
+      padding: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+    
+    .faq-question:hover {
+      background: #e5e5e5;
+    }
+    
+    .faq-answer {
+      padding: 12px;
+      border-top: 1px solid #eee;
+      display: none;
+    }
+    
+    .faq-answer.open {
+      display: block;
+    }
+    
+    .faq-question::after {
+      content: "+";
+      font-size: 18px;
+      font-weight: bold;
+      color: #1b76c1;
+    }
+    
+    .faq-question.open::after {
+      content: "-";
+    }
+    
+    .loading-faq {
+      padding: 12px;
+      color: #666;
+      text-align: center;
+      font-style: italic;
+    }
+
+  </style>
+</head>
+<body>
+  
+  <div class="section">
+    <button id="reload-btn" style="padding:0.4em 1em;">Reload</button>
+  </div>
+
+  <div id="summary-counts" style="padding: 5px; border-bottom: 1px solid #ccc; margin-bottom: 10px;">
+    Total Links: <span id="total-links-count">0</span> |
+    Total Buttons: <span id="total-buttons-count">0</span> |
+    Total Images: <span id="total-images-count">0</span> |
+    Total SVGs: <span id="total-svgs-count">0</span>
+</div>
+  
+
+  <h2 style="margin:1em 1em 0.5em 1em;">Links & Buttons</h2>
+  
+  <div class="section">
+  <div id="filter-panel"></div>
+  <div id="results">Loading...</div>
+  </div>
+
+
+  <div class="section">
+    <details>
+      <summary>Frequently Asked Questions</summary>
+      <div id="faqList" class="faq-container">
+        <div class="loading-faq">Loading FAQs...</div>
+      </div>
+    </details>
+  </div>
+  
+  
+<script src="sidepanel.js"></script>
+</body>
+</html>
