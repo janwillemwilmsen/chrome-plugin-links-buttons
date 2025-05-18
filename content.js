@@ -82,6 +82,77 @@ function getAllInteractiveElements(root = document) {
   return findAllElementsRecursive(selector, root);
 }
 
+
+// Check if an element or its ::before/::after pseudo-elements
+// use `position: absolute` with visible content.
+function hasAbsolutePosition(el) {
+  if (!el || !el.tagName) return false;
+  try {
+    const style = window.getComputedStyle(el);
+    if (style.position === 'absolute') return true;
+    for (const pseudo of ['::before', '::after']) {
+      const ps = window.getComputedStyle(el, pseudo);
+      if (ps && ps.position === 'absolute' && ps.content && ps.content !== 'none' && ps.content !== '""') {
+        return true;
+      }
+    }
+  } catch (e) {
+    if (DEBUG) console.warn('Error checking absolute position', e);
+  }
+  return false;
+}
+
+// Analyze an element that has absolute positioning. Returns HTML,
+// text content and any images/SVGs processed via existing helpers.
+async function analyzeAbsoluteElement(el) {
+  if (!hasAbsolutePosition(el)) return null;
+  const html = el.innerHTML;
+  const text = el.textContent ? el.textContent.trim() : '';
+  let images = [];
+  try {
+    if (typeof analyzeSingleImage === 'function') {
+      const imageElements = findAllElementsRecursive('img,svg', el);
+      if (imageElements.length) {
+        const results = await Promise.all(imageElements.map(img => analyzeSingleImage(img)));
+        images = results.flat().filter(Boolean);
+      }
+    } else {
+      el.querySelectorAll('img,svg').forEach(img => {
+        if (img.tagName && img.tagName.toLowerCase() === 'img') {
+          images.push({ type: 'img', src: img.src, alt: img.getAttribute('alt'), title: img.getAttribute('title') });
+        } else if (img.tagName && img.tagName.toLowerCase() === 'svg') {
+          images.push({ type: 'svg', outerHTML: img.outerHTML });
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Error analyzing absolute element images:', e);
+  }
+  return { html, text, images };
+}
+
+// Gather all absolutely positioned links or buttons and
+// return processed data using the above helpers.
+async function getAbsoluteLinksButtonsData(root = document) {
+  const all = getAllInteractiveElements(root);
+  const absoluteEls = all.filter(hasAbsolutePosition);
+  const results = [];
+  for (const el of absoluteEls) {
+    const data = await analyzeAbsoluteElement(el);
+    if (data) results.push(data);
+  }
+  return results;
+}
+
+// Expose helpers globally for easy usage
+if (typeof window !== 'undefined') {
+  window.getAbsoluteLinksButtonsData = getAbsoluteLinksButtonsData;
+  window.analyzeAbsoluteElement = analyzeAbsoluteElement;
+  window.hasAbsolutePosition = hasAbsolutePosition;
+}
+
+
+
 async function extractElementData(el, sequentialId, isButton) { 
   if (!el || !el.tagName) return { type: '', linkUrl: '', text: '', slotContent: '', images: [] };
   let tag = el.tagName.toLowerCase();
