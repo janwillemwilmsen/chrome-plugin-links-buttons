@@ -1,6 +1,8 @@
+const DEBUG = false;
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request && request.action === 'get-links-buttons') {
-    console.log('[ContentScript] Received get-links-buttons');
+    if (DEBUG) console.log('[ContentScript] Received get-links-buttons');
     // Use an async IIFE to handle the async operation
     (async () => {
       try {
@@ -18,12 +20,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         // Use Promise.all to wait for all async calls to extractElementData
         const items = await Promise.all(itemsPromises);
-        console.log('[ContentScript] Sending items:', items);
+        if (DEBUG) console.log('[ContentScript] Sending items:', items);
 		const jsonString = JSON.stringify(items);
 		const totalLength = jsonString.length;
-		console.log(`[ContentScript] Estimated total character length of items (as JSON string): ${totalLength}`);
+                if (DEBUG) console.log(`[ContentScript] Estimated total character length of items (as JSON string): ${totalLength}`);
 		// Optional: Log size in KB/MB for easier reading
-		 console.log(`[ContentScript] Estimated size: ${(totalLength / 1024).toFixed(2)} KB / ${(totalLength / 1024 / 1024).toFixed(2)} MB`);
+                 if (DEBUG) console.log(`[ContentScript] Estimated size: ${(totalLength / 1024).toFixed(2)} KB / ${(totalLength / 1024 / 1024).toFixed(2)} MB`);
 
 
 		 
@@ -209,7 +211,7 @@ async function extractElementData(el, sequentialId, isButton) {
   let images = [];
   // Check if analyzeSingleImage is available (from images.js)
   if (typeof analyzeSingleImage === 'function') { // Ensure analyzeSingleImage is loaded
-    console.log('Using analyzeSingleImage with Shadow DOM support to get images for element:', el);
+    if (DEBUG) console.log('Using analyzeSingleImage with Shadow DOM support to get images for element:', el);
     // Use findAllElementsRecursive to find images/svg within the element (pierces shadow DOM)
     const imageElements = findAllElementsRecursive('img,svg', el);
 

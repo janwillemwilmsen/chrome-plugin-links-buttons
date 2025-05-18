@@ -1,6 +1,8 @@
+const DEBUG = false;
+
 // Utility: Recursively get all elements, including shadow roots
 function getAllElements(root = document) {
-	console.log("getAllElements called with root:", root);
+        if (DEBUG) console.log("getAllElements called with root:", root);
   let elements = [];
   const treeWalker = document.createTreeWalker(
     root,
@@ -40,7 +42,7 @@ function unique(arr) {
 
 
 async function gatherLinksAndButtons() {
-	console.log("gatherLinksAndButtons called");
+        if (DEBUG) console.log("gatherLinksAndButtons called");
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || !tab.id) {
     renderResults([]);
@@ -83,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 				// Check if it's the tab we reloaded and if it's completely loaded
 				if (updatedTabId === tabIdToReload && changeInfo.status === 'complete') {
 				  // --- Tab is loaded, NOW gather data ---
-				  console.log(`Tab ${tabIdToReload} finished reloading. Fetching links/buttons.`);
+                                  if (DEBUG) console.log(`Tab ${tabIdToReload} finished reloading. Fetching links/buttons.`);
 				  gatherLinksAndButtons(); // Fetch fresh data
 				  renderFilterPanel();    // Re-render filters if needed
   
@@ -105,14 +107,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 					  results.innerHTML = '<em>Error starting page reload.</em>';
 				   }
 				} else {
-				   console.log(`Initiated reload for tab ${tabIdToReload}. Waiting for completion...`);
+                                   if (DEBUG) console.log(`Initiated reload for tab ${tabIdToReload}. Waiting for completion...`);
 				   // No location.reload() here! We wait for the listener.
 				}
 			  });
   
 			} else {
 			  // If no active tab found, maybe just refresh panel state?
-			  console.log("No active tab found to reload.");
+                          if (DEBUG) console.log("No active tab found to reload.");
 			   if (results) {
 				 results.innerHTML = '<em>No active tab found.</em>';
 			   }
@@ -122,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 			}
 		  });
 		} else {
-		  console.log("chrome.tabs API not available.");
+                  if (DEBUG) console.log("chrome.tabs API not available.");
 		   if (results) {
 			 results.innerHTML = '<em>Browser API error.</em>';
 		   }
@@ -193,7 +195,7 @@ function renderFilterPanel() {
 }
 
 function renderResults(items) {
-	console.log("renderResults called with items:");
+        if (DEBUG) console.log("renderResults called with items:");
   const results = document.getElementById('results');
   if (!items.length) {
     results.innerHTML = '<em>No links or buttons found.</em>';
