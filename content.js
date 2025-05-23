@@ -32,6 +32,18 @@ function getElementHtml(el) {
     }
   }
 
+// Get inner HTML for an element, including shadow DOM or slotted content when available
+function getElementHtml(el) {
+  let html = el.innerHTML || '';
+  if (el.shadowRoot) {
+    html += el.shadowRoot.innerHTML;
+  }
+  if (typeof el.assignedNodes === 'function') {
+    const assigned = Array.from(el.assignedNodes());
+    if (assigned.length) {
+      html += assigned.map(n => n.outerHTML || n.textContent || '').join('');
+    }
+  }
   return html.trim();
 }
 
