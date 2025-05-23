@@ -23,6 +23,9 @@ function renderResults(data) {
   (data.elements || []).forEach(item => {
     const li = document.createElement('li');
     li.textContent = `[${item.tag}] ${item.text || item.href || ''}`;
+    if (item.html) {
+      console.log('Element HTML:', item.html);
+    }
     list.appendChild(li);
   });
   const count = Array.isArray(data.elements) ? data.elements.length : 0;
