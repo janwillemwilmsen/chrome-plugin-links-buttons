@@ -86,6 +86,24 @@ async function handleReload() {
   if (!tab) return;
   showLoading();
   await reloadTabAndWait(tab.id);
+
+  });
+}
+
+// Fetch link/button data from the active tab
+async function requestData() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  await waitForTabComplete(tab.id);
+  chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
+}
+
+async function handleReload() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  const done = waitForTabComplete(tab.id);
+  chrome.tabs.reload(tab.id, { bypassCache: true });
+  await done;
   chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
 }
 
