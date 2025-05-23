@@ -29,6 +29,7 @@ function renderResults(data) {
   document.getElementById('counts').textContent = `Items found: ${count}`;
 }
 
+
 function showLoading() {
   document.getElementById('counts').textContent = 'Loading...';
   const list = document.getElementById('resultList');
@@ -51,6 +52,7 @@ function waitForTabComplete(tabId) {
       };
       chrome.tabs.onUpdated.addListener(listener);
     });
+
   });
 }
 
@@ -95,6 +97,8 @@ async function requestData() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
   await waitForTabComplete(tab.id);
+  // Give dynamic pages a moment to render additional content
+  await new Promise(r => setTimeout(r, 1000));
   chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
 }
 
@@ -104,6 +108,8 @@ async function handleReload() {
   const done = waitForTabComplete(tab.id);
   chrome.tabs.reload(tab.id, { bypassCache: true });
   await done;
+  await new Promise(r => setTimeout(r, 1000));
+
   chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
 }
 
