@@ -28,14 +28,43 @@ function renderResults(data) {
   document.getElementById('counts').textContent = `Items found: ${data.elements.length}`;
 }
 
-function requestData() {
-  chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-    if (!tabs.length) return;
-    chrome.tabs.sendMessage(tabs[0].id, { action: 'collect' }, renderResults);
+// Wait until the given tab has finished loading
+function waitForTabComplete(tabId) {
+  return new Promise(resolve => {
+    chrome.tabs.get(tabId, tab => {
+      if (!tab || tab.status === 'complete') {
+        resolve();
+        return;
+      }
+      const listener = (updatedId, info) => {
+        if (updatedId === tabId && info.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      };
+      chrome.tabs.onUpdated.addListener(listener);
+    });
   });
 }
 
-document.getElementById('reload').addEventListener('click', requestData);
+// Fetch link/button data from the active tab
+async function requestData() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  await waitForTabComplete(tab.id);
+  chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
+}
+
+async function handleReload() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  const done = waitForTabComplete(tab.id);
+  chrome.tabs.reload(tab.id, { bypassCache: true });
+  await done;
+  chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
+}
+
+document.getElementById('reload').addEventListener('click', handleReload);
 
 chrome.runtime.onMessage.addListener(message => {
   if (message.action === 'page-navigated') {
