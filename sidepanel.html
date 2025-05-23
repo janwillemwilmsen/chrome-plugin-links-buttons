@@ -125,33 +125,32 @@
 </head>
 <body>
   
-  <div class="section">
+  <div class="section" id="title-section">
+    <h2 class="section-title">Links &amp; Buttons Finder</h2>
     <button id="reload-btn" style="padding:0.4em 1em;">Reload</button>
+    <div id="summary-counts" style="margin-top:10px;">
+      Total Links: <span id="total-links-count">0</span> |
+      Total Buttons: <span id="total-buttons-count">0</span> |
+      Total Images: <span id="total-images-count">0</span> |
+      Total SVGs: <span id="total-svgs-count">0</span>
+    </div>
   </div>
 
-  <div id="summary-counts" style="padding: 5px; border-bottom: 1px solid #ccc; margin-bottom: 10px;">
-    Total Links: <span id="total-links-count">0</span> |
-    Total Buttons: <span id="total-buttons-count">0</span> |
-    Total Images: <span id="total-images-count">0</span> |
-    Total SVGs: <span id="total-svgs-count">0</span>
-</div>
-  
-
-  <h2 style="margin:1em 1em 0.5em 1em;">Links & Buttons</h2>
-  
-  <div class="section">
-  <div id="filter-panel"></div>
-  <div id="results">Loading...</div>
+  <div class="section" id="filter-section">
+    <h3 class="section-title">Filters</h3>
+    <div id="filter-panel"></div>
   </div>
 
+  <div class="section" id="results-section">
+    <h3 class="section-title">Results</h3>
+    <div id="results">Loading...</div>
+  </div>
 
-  <div class="section">
-    <details>
-      <summary>Frequently Asked Questions</summary>
-      <div id="faqList" class="faq-container">
-        <div class="loading-faq">Loading FAQs...</div>
-      </div>
-    </details>
+  <div class="section" id="faq-section">
+    <h3 class="section-title">FAQs</h3>
+    <div id="faqList" class="faq-container">
+      <div class="loading-faq">Loading FAQs...</div>
+    </div>
   </div>
   
   
