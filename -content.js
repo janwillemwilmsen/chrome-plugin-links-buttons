@@ -1,8 +1,8 @@
-const DEBUG = false;
+const DEBUGcontentJs = false;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request && request.action === 'get-links-buttons') {
-    if (DEBUG) console.log('[ContentScript] Received get-links-buttons');
+    if (DEBUGcontentJs) console.log('[ContentScript] Received get-links-buttons');
     // Use an async IIFE to handle the async operation
     (async () => {
       try {
@@ -20,12 +20,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         // Use Promise.all to wait for all async calls to extractElementData
         const items = await Promise.all(itemsPromises);
-        if (DEBUG) console.log('[ContentScript] Sending items:', items);
+        if (DEBUGcontentJs) console.log('[ContentScript] Sending items:', items);
 		const jsonString = JSON.stringify(items);
 		const totalLength = jsonString.length;
-                if (DEBUG) console.log(`[ContentScript] Estimated total character length of items (as JSON string): ${totalLength}`);
+                if (DEBUGcontentJs) console.log(`[ContentScript] Estimated total character length of items (as JSON string): ${totalLength}`);
 		// Optional: Log size in KB/MB for easier reading
-                 if (DEBUG) console.log(`[ContentScript] Estimated size: ${(totalLength / 1024).toFixed(2)} KB / ${(totalLength / 1024 / 1024).toFixed(2)} MB`);
+                 if (DEBUGcontentJs) console.log(`[ContentScript] Estimated size: ${(totalLength / 1024).toFixed(2)} KB / ${(totalLength / 1024 / 1024).toFixed(2)} MB`);
 
 
 		 
@@ -114,7 +114,7 @@ function getEffectiveClickableRect(el) {
           if (r.bottom > maxY) maxY = r.bottom;
         });
       } catch (e) {
-        if (DEBUG) console.warn('Failed to get box quads for', pseudo, e);
+        if (DEBUGcontentJs) console.warn('Failed to get box quads for', pseudo, e);
       }
     }
   });
@@ -153,7 +153,7 @@ function hasAbsolutePosition(el) {
       }
     }
   } catch (e) {
-    if (DEBUG) console.warn('Error checking absolute position', e);
+    if (DEBUGcontentJs) console.warn('Error checking absolute position', e);
   }
   return false;
 }
@@ -353,7 +353,7 @@ async function extractElementData(el, sequentialId, isButton) {
   let images = [];
   // Check if analyzeSingleImage is available (from images.js)
   if (typeof analyzeSingleImage === 'function') { // Ensure analyzeSingleImage is loaded
-    if (DEBUG) console.log('Using analyzeSingleImage with Shadow DOM support to get images for element:', el);
+    if (DEBUGcontentJs) console.log('Using analyzeSingleImage with Shadow DOM support to get images for element:', el);
     // Use findAllElementsRecursive to find images/svg within the element (pierces shadow DOM)
     const imageElements = findAllElementsRecursive('img,svg', el);
 

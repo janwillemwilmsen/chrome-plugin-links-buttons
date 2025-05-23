@@ -39,4 +39,4 @@ Several HTML pages are included for manual testing:
 - `test-shadowdom.html` – examples inside Shadow DOM.
 - `test-svgs.html` – simple SVG examples.
 
-Start a local server in this directory, e.g. with `python3 -m http.server`, and open these pages to try the extension.
+]
