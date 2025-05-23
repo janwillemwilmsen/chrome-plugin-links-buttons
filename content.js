@@ -14,6 +14,24 @@ function findInteractiveElements(root = document) {
 }
 
 // Collect links and buttons on the page
+// Get outer HTML for an element and include relevant shadow/slotted content
+function getElementHtml(el) {
+  let html = el.outerHTML || '';
+
+  if (el.shadowRoot) {
+    const shadow = Array.from(el.shadowRoot.childNodes)
+      .map(n => n.outerHTML || n.textContent || '')
+      .join('');
+    html += `\n<shadow-root>${shadow}</shadow-root>`;
+  }
+
+  if (typeof el.assignedNodes === 'function') {
+    const assigned = Array.from(el.assignedNodes());
+    if (assigned.length) {
+      html += '\n' + assigned.map(n => n.outerHTML || n.textContent || '').join('');
+    }
+  }
+
 // Get inner HTML for an element, including shadow DOM or slotted content when available
 function getElementHtml(el) {
   let html = el.innerHTML || '';
