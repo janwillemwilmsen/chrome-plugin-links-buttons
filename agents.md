@@ -15,6 +15,17 @@ And below the list of links/buttons there would be a faq part, it uses a json fi
 use browser DevTools to detect attributes, computed styles, and event listeners.
 
 Variations/Attributes on links or Buttons:
+Get the html of the link / button element. 
+Check If the link has CSS2 or CSS3 that has position absolute. To make elements outside clickable.
+Check if the link has CSS2 or CSS3 with Pseudo Classes (:before  :after ::before ::after) with position absolute. To make elements outside clickable. 
+link with javascript clickhandler. 
+
+link in Shadow Dom
+Links used within web component <slot> elements in Shadow DOM.
+Link in webcomponent
+
+
+
 link with text
 link opens in new window
 link has title / title value
@@ -24,20 +35,15 @@ link has aria-describedby / find ID from aria-describedBy and use that value.
 link has aria-labelledBy / find ID from aria-labelledBy and use that value.
 link has role button / link  
 link has role presentation
+link has aria-hidden-true 
 
-link with jpeg image
-link with png image
-link with webp image
-link with avif image
-link with external svg image
+
+link with external (jpeg/png/svg/avif/webp) image
 link with inline svg image 
-link with background jpeg
-link with background png
-link with background avif
-link with background webp
-link with background external svg
+link with background (jpeg/png/avif/webp/svg) image
 link with background inline svg
 link with data URLs (e.g., data:image/png;base64,...).
+link with image aria-hidden-true
 link with image + image has ALT
 link with image + image has no ALT
 link with image + image has empty ALT
@@ -49,13 +55,7 @@ link with image + image is in picture element
 link with image + image is in figure element
 link with image + image is in figure element and figCaption
 
-link with CSS2 or CSS3 that have position absolute. To make elements outside clickable.
-link with CSS2 or CSS3 that have Pseudo Classes (before or after) with position absolute. To make elements outside clickable.
-link with javascript clickhandler. 
 
-link in Shadow Dom
-Links used within web component <slot> elements in Shadow DOM.
-Link in webcomponent
 
 
 Key Implementation Steps
