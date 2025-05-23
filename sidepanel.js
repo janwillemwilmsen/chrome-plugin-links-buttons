@@ -20,12 +20,20 @@ function fetchFaqs() {
 function renderResults(data) {
   const list = document.getElementById('resultList');
   list.innerHTML = '';
-  data.elements.forEach(item => {
+  (data.elements || []).forEach(item => {
     const li = document.createElement('li');
     li.textContent = `[${item.tag}] ${item.text || item.href || ''}`;
     list.appendChild(li);
   });
-  document.getElementById('counts').textContent = `Items found: ${data.elements.length}`;
+  const count = Array.isArray(data.elements) ? data.elements.length : 0;
+  document.getElementById('counts').textContent = `Items found: ${count}`;
+}
+
+
+function showLoading() {
+  document.getElementById('counts').textContent = 'Loading...';
+  const list = document.getElementById('resultList');
+  if (list) list.innerHTML = '';
 }
 
 // Wait until the given tab has finished loading
@@ -44,6 +52,43 @@ function waitForTabComplete(tabId) {
       };
       chrome.tabs.onUpdated.addListener(listener);
     });
+
+  });
+}
+
+// Fetch link/button data from the active tab
+async function requestData() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  showLoading();
+  await waitForTabComplete(tab.id);
+  chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
+}
+
+function reloadTabAndWait(tabId) {
+  return new Promise(resolve => {
+    const listener = (updatedId, info) => {
+      if (updatedId === tabId && info.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    chrome.tabs.reload(tabId, { bypassCache: true }, () => {
+      if (chrome.runtime.lastError) {
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    });
+  });
+}
+
+async function handleReload() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  showLoading();
+  await reloadTabAndWait(tab.id);
+
   });
 }
 
@@ -64,6 +109,7 @@ async function handleReload() {
   chrome.tabs.reload(tab.id, { bypassCache: true });
   await done;
   await new Promise(r => setTimeout(r, 1000));
+
   chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
 }
 
