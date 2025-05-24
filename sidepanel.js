@@ -92,7 +92,6 @@ async function handleReload() {
   showLoading();
   await reloadTabAndWait(tab.id);
 
-  });
 }
 
 // Fetch link/button data from the active tab
