@@ -75,6 +75,16 @@ function collectElements() {
       hasPositionAbsolute: positionAbsolute,
       hasPseudoAbsolute: pseudoAbsolute,
       hasJsClickHandler: hasClickHandler
+      href: href,
+      html: el.outerHTML,
+      inShadowDom,
+      inSlot,
+      hasPositionAbsolute: positionAbsolute,
+      absoluteHtml: htmlAbsolute,
+      hasPseudoAbsolute: pseudoAbsolute,
+      pseudoHtml: htmlPseudo,
+      hasJsClickHandler: hasClickHandler,
+      jsHandlerHtml: hasClickHandler ? el.outerHTML : null
     };
   });
 }
