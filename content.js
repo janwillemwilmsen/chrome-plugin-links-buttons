@@ -53,11 +53,18 @@ function collectElements() {
 
     const href = el.getAttribute('href');
     const hasJsHref = href && href.trim().toLowerCase().startsWith('javascript:');
+    const hasClickHandler =
+      hasJsHref || el.hasAttribute('onclick') || typeof el.onclick === 'function';
+
     const hasClickHandler = hasJsHref || el.hasAttribute('onclick') || typeof el.onclick === 'function';
 
     const inShadowDom = el.getRootNode() instanceof ShadowRoot;
     const inSlot = !!(el.assignedSlot || el.parentNode instanceof HTMLSlotElement);
 
+    const htmlSet = new Set([el.outerHTML]);
+    if (htmlAbsolute) htmlSet.add(htmlAbsolute);
+    if (htmlPseudo) htmlSet.add(htmlPseudo);
+    if (hasClickHandler) htmlSet.add(el.outerHTML);
     const htmlcode = [];
     if (el.outerHTML) htmlcode.push(el.outerHTML);
     if (htmlAbsolute && !htmlcode.includes(htmlAbsolute)) htmlcode.push(htmlAbsolute);
@@ -69,6 +76,8 @@ function collectElements() {
       tag: el.tagName.toLowerCase(),
       text: (el.innerText || '').trim(),
       href,
+      htmlcode: Array.from(htmlSet),
+
       htmlcode,
       inShadowDom,
       inSlot,

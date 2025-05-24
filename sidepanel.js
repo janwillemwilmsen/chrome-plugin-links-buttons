@@ -23,6 +23,12 @@ function renderResults(data) {
   (data.elements || []).forEach(item => {
     const li = document.createElement('li');
     li.textContent = `[${item.tag}] ${item.text || item.href || ''}`;
+    if (Array.isArray(item.htmlcode)) {
+      li.addEventListener('click', () => {
+        item.htmlcode.forEach((html, i) => {
+          console.log(`HTML ${i + 1}:`, html);
+        });
+
     if (item.htmlcode && item.htmlcode.length) {
       li.addEventListener('click', () => {
         console.log('HTML code:', item.htmlcode);
@@ -100,8 +106,22 @@ async function handleReload() {
 async function requestData() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
+  showLoading();
+  await waitForTabComplete(tab.id);
+
   await waitForTabComplete(tab.id);
   // Give dynamic pages a moment to render additional content
+  await new Promise(r => setTimeout(r, 1000));
+  chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
+}
+
+async function handleReload() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  showLoading();
+  const done = waitForTabComplete(tab.id);
+  chrome.tabs.reload(tab.id, { bypassCache: true });
+  await done;
   await new Promise(r => setTimeout(r, 1000));
   chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
 }
