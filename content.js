@@ -58,10 +58,23 @@ function collectElements() {
     const inShadowDom = el.getRootNode() instanceof ShadowRoot;
     const inSlot = !!(el.assignedSlot || el.parentNode instanceof HTMLSlotElement);
 
+    const htmlcode = [];
+    if (el.outerHTML) htmlcode.push(el.outerHTML);
+    if (htmlAbsolute && !htmlcode.includes(htmlAbsolute)) htmlcode.push(htmlAbsolute);
+    if (htmlPseudo && !htmlcode.includes(htmlPseudo)) htmlcode.push(htmlPseudo);
+    if (hasClickHandler && !htmlcode.includes(el.outerHTML)) htmlcode.push(el.outerHTML);
+
     return {
       id: index,
       tag: el.tagName.toLowerCase(),
       text: (el.innerText || '').trim(),
+      href,
+      htmlcode,
+      inShadowDom,
+      inSlot,
+      hasPositionAbsolute: positionAbsolute,
+      hasPseudoAbsolute: pseudoAbsolute,
+      hasJsClickHandler: hasClickHandler
       href: href,
       html: el.outerHTML,
       inShadowDom,
