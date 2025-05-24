@@ -23,8 +23,10 @@ function renderResults(data) {
   (data.elements || []).forEach(item => {
     const li = document.createElement('li');
     li.textContent = `[${item.tag}] ${item.text || item.href || ''}`;
-    if (item.html) {
-      console.log('Element HTML:', item.html);
+    if (item.htmlcode && item.htmlcode.length) {
+      li.addEventListener('click', () => {
+        console.log('HTML code:', item.htmlcode);
+      });
     }
     list.appendChild(li);
   });
@@ -59,15 +61,6 @@ function waitForTabComplete(tabId) {
   });
 }
 
-// Fetch link/button data from the active tab
-async function requestData() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return;
-  showLoading();
-  await waitForTabComplete(tab.id);
-  chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
-}
-
 function reloadTabAndWait(tabId) {
   return new Promise(resolve => {
     const listener = (updatedId, info) => {
@@ -89,9 +82,12 @@ function reloadTabAndWait(tabId) {
 async function handleReload() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
-  showLoading();
-  await reloadTabAndWait(tab.id);
+  const done = waitForTabComplete(tab.id);
+  chrome.tabs.reload(tab.id, { bypassCache: true });
+  await done;
+  await new Promise(r => setTimeout(r, 1000));
 
+  chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
 }
 
 // Fetch link/button data from the active tab
@@ -101,17 +97,6 @@ async function requestData() {
   await waitForTabComplete(tab.id);
   // Give dynamic pages a moment to render additional content
   await new Promise(r => setTimeout(r, 1000));
-  chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
-}
-
-async function handleReload() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return;
-  const done = waitForTabComplete(tab.id);
-  chrome.tabs.reload(tab.id, { bypassCache: true });
-  await done;
-  await new Promise(r => setTimeout(r, 1000));
-
   chrome.tabs.sendMessage(tab.id, { action: 'collect' }, renderResults);
 }
 
