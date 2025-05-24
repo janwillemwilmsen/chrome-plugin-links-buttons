@@ -56,6 +56,8 @@ function collectElements() {
     const hasClickHandler =
       hasJsHref || el.hasAttribute('onclick') || typeof el.onclick === 'function';
 
+    const hasClickHandler = hasJsHref || el.hasAttribute('onclick') || typeof el.onclick === 'function';
+
     const inShadowDom = el.getRootNode() instanceof ShadowRoot;
     const inSlot = !!(el.assignedSlot || el.parentNode instanceof HTMLSlotElement);
 
@@ -63,6 +65,11 @@ function collectElements() {
     if (htmlAbsolute) htmlSet.add(htmlAbsolute);
     if (htmlPseudo) htmlSet.add(htmlPseudo);
     if (hasClickHandler) htmlSet.add(el.outerHTML);
+    const htmlcode = [];
+    if (el.outerHTML) htmlcode.push(el.outerHTML);
+    if (htmlAbsolute && !htmlcode.includes(htmlAbsolute)) htmlcode.push(htmlAbsolute);
+    if (htmlPseudo && !htmlcode.includes(htmlPseudo)) htmlcode.push(htmlPseudo);
+    if (hasClickHandler && !htmlcode.includes(el.outerHTML)) htmlcode.push(el.outerHTML);
 
     return {
       id: index,
@@ -70,11 +77,23 @@ function collectElements() {
       text: (el.innerText || '').trim(),
       href,
       htmlcode: Array.from(htmlSet),
+
+      htmlcode,
       inShadowDom,
       inSlot,
       hasPositionAbsolute: positionAbsolute,
       hasPseudoAbsolute: pseudoAbsolute,
       hasJsClickHandler: hasClickHandler
+      href: href,
+      html: el.outerHTML,
+      inShadowDom,
+      inSlot,
+      hasPositionAbsolute: positionAbsolute,
+      absoluteHtml: htmlAbsolute,
+      hasPseudoAbsolute: pseudoAbsolute,
+      pseudoHtml: htmlPseudo,
+      hasJsClickHandler: hasClickHandler,
+      jsHandlerHtml: hasClickHandler ? el.outerHTML : null
     };
   });
 }
