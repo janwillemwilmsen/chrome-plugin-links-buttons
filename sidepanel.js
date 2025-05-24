@@ -24,7 +24,12 @@ function renderResults(data) {
     const li = document.createElement('li');
     li.textContent = `[${item.tag}] ${item.text || item.href || ''}`;
     if (item.html) {
-      console.log('Element HTML:', item.html);
+      li.addEventListener('click', () => {
+        console.log('Element HTML:', item.html);
+        if (item.absoluteHtml) console.log('Absolute HTML:', item.absoluteHtml);
+        if (item.pseudoHtml) console.log('Pseudo HTML:', item.pseudoHtml);
+        if (item.jsHandlerHtml) console.log('JS Handler HTML:', item.jsHandlerHtml);
+      });
     }
     list.appendChild(li);
   });
