@@ -51,45 +51,92 @@ function getObjectSize(obj) {
   }
 }
 
-// Truncate comprehensive HTML object
-function truncateComprehensiveHtml(comprehensiveHtml) {
-  if (!comprehensiveHtml) return null;
+// Get the most relevant HTML containing the interactive element
+function getRelevantHtml(element) {
+  if (!isValidElement(element)) return null;
   
-  const truncated = {};
-  for (const [key, value] of Object.entries(comprehensiveHtml)) {
-    if (value && typeof value === 'string') {
-      truncated[key] = truncateHtml(value);
-    } else {
-      truncated[key] = value;
+  // Simplified priority order for determining the most relevant HTML:
+  // 1. If element is in Shadow DOM, get shadow DOM content (most specific and valuable)
+  // 2. If element has JavaScript handlers, get parent context (usually most relevant)
+  // 3. If element has absolute positioning, get positioning context
+  // 4. If element has pseudo-elements with absolute positioning, get pseudo context
+  // 5. Fallback to element's own HTML
+  
+  const computed = getComputedStyleSafe(element);
+  const pseudoInfo = hasPseudoElementsWithAbsolute(element);
+  
+  // 1. Shadow DOM content - most specific and valuable
+  const rootNode = element.getRootNode();
+  if (rootNode instanceof ShadowRoot) {
+    return {
+      html: rootNode.innerHTML,
+      reason: 'Shadow DOM Content',
+      description: 'Content from Shadow DOM containing the element'
+    };
+  }
+  
+  // 2. JavaScript handlers - often the most relevant context for functionality
+  if (hasJavaScriptHandlers(element)) {
+    const parent = element.parentElement;
+    if (parent && isValidElement(parent)) {
+      // Get a reasonable parent container, not too large
+      const contextParent = element.closest('section, article, div[class], div[id], main, aside, nav, li, td, th') || parent;
+      if (contextParent && contextParent !== document.body && isValidElement(contextParent)) {
+        return {
+          html: contextParent.outerHTML,
+          reason: 'JavaScript Handler Context',
+          description: 'Parent container of element with JavaScript event handlers'
+        };
+      }
+      return {
+        html: parent.outerHTML,
+        reason: 'JavaScript Handler Parent',
+        description: 'Direct parent of element with JavaScript handlers'
+      };
     }
   }
-  return truncated;
+  
+  // 3. Absolute positioning context - important for layout understanding
+  if (computed.position === 'absolute' || computed.position === 'fixed') {
+    const relativeParent = findNearestRelative(element);
+    if (relativeParent && isValidElement(relativeParent) && relativeParent !== document.body) {
+      return {
+        html: relativeParent.outerHTML,
+        reason: 'Positioning Context',
+        description: `Container for ${computed.position} positioned element`
+      };
+    }
+  }
+  
+  // 4. Pseudo-element context - relevant when pseudo-elements affect clickability
+  if (pseudoInfo.hasPseudo) {
+    const relativeParent = findNearestRelative(element);
+    if (relativeParent && isValidElement(relativeParent) && relativeParent !== document.body) {
+      return {
+        html: relativeParent.outerHTML,
+        reason: 'Pseudo-Element Context',
+        description: 'Container with pseudo-elements that may affect interaction'
+      };
+    }
+  }
+  
+  // 5. Fallback - element's own HTML
+  return {
+    html: element.outerHTML,
+    reason: 'Element HTML',
+    description: 'The interactive element itself'
+  };
 }
 
-// Truncate element data to fit size constraints
+// Truncate element data to fit size constraints (simplified)
 function truncateElementData(element) {
   if (!element) return element;
   
   const truncated = { ...element };
   
-  // Truncate basic HTML
-  if (truncated.html) {
-    truncated.html = truncateHtml(truncated.html);
-  }
-  
-  // Truncate comprehensive HTML
-  if (truncated.comprehensiveHtml) {
-    truncated.comprehensiveHtml = truncateComprehensiveHtml(truncated.comprehensiveHtml);
-  }
-  
-  // Truncate shadow host HTML
-  if (truncated.shadowHostHtml) {
-    truncated.shadowHostHtml = truncateHtml(truncated.shadowHostHtml);
-  }
-  
-  // Truncate slot element HTML
-  if (truncated.slotElement) {
-    truncated.slotElement = truncateHtml(truncated.slotElement);
+  // Truncate the single relevant HTML
+  if (truncated.relevantHtml && truncated.relevantHtml.html) {
+    truncated.relevantHtml.html = truncateHtml(truncated.relevantHtml.html);
   }
   
   // Truncate text content if extremely long
@@ -100,10 +147,285 @@ function truncateElementData(element) {
   return truncated;
 }
 
-// Prepare data for sending with size management
+// Enhanced element analysis (simplified)
+function analyzeElement(element, index) {
+  if (!isValidElement(element)) {
+    console.warn('Invalid element passed to analyzeElement:', element);
+    return null;
+  }
+  
+  const computed = getComputedStyleSafe(element);
+  const pseudoInfo = hasPseudoElementsWithAbsolute(element);
+  const relevantHtml = getRelevantHtml(element);
+  
+  // Check for Shadow DOM context
+  const rootNode = element.getRootNode();
+  const inShadowDom = rootNode instanceof ShadowRoot;
+  const shadowHost = inShadowDom ? rootNode.host : null;
+  
+  // Check for slot context
+  const inSlot = !!(element.assignedSlot || element.closest('slot'));
+  
+  // Check for web component context
+  let inWebComponent = false;
+  try {
+    const closestElement = element.closest('*');
+    inWebComponent = !!(closestElement && closestElement.tagName && closestElement.tagName.includes('-'));
+  } catch (e) {
+    // Fallback check
+    let parent = element.parentElement;
+    while (parent && parent !== document.body) {
+      if (isValidElement(parent) && parent.tagName && parent.tagName.includes('-')) {
+        inWebComponent = true;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+  }
+  
+  // Analyze positioning
+  const hasAbsolutePosition = computed.position === 'absolute';
+  const hasFixedPosition = computed.position === 'fixed';
+  const hasRelativePosition = computed.position === 'relative';
+  
+  // Analyze JavaScript handlers
+  const hasJsHandlers = hasJavaScriptHandlers(element);
+  const href = element.getAttribute('href');
+  const hasJsHref = href && href.trim().toLowerCase().startsWith('javascript:');
+  
+  // Get text content safely
+  let textContent = '';
+  try {
+    textContent = (element.innerText || element.textContent || '').trim();
+  } catch (e) {
+    textContent = '';
+  }
+  
+  return {
+    id: index,
+    tag: element.tagName.toLowerCase(),
+    text: textContent,
+    href: href,
+    
+    // Single most relevant HTML block
+    relevantHtml: relevantHtml,
+    
+    // Analysis flags for UI display
+    inShadowDom: inShadowDom,
+    shadowHost: shadowHost && isValidElement(shadowHost) ? shadowHost.tagName.toLowerCase() : null,
+    inSlot: inSlot,
+    inWebComponent: inWebComponent,
+    isWebComponent: element.tagName.includes('-'),
+    hasAbsolutePosition: hasAbsolutePosition,
+    hasFixedPosition: hasFixedPosition,
+    hasRelativePosition: hasRelativePosition,
+    hasPseudoElements: pseudoInfo.hasPseudo,
+    pseudoElementInfo: pseudoInfo,
+    hasJsHandlers: hasJsHandlers,
+    hasJsHref: hasJsHref,
+    
+    // CSS information
+    computedStyles: {
+      position: computed.position,
+      display: computed.display,
+      visibility: computed.visibility,
+      zIndex: computed.zIndex
+    }
+  };
+}
+
+// Main collection function with deduplication - MOVED TO MESSAGE HANDLER
+
+// Deduplicate elements by href, prioritizing more valuable content
+function deduplicateElements(elements) {
+  const hrefMap = new Map();
+  const nonHrefElements = [];
+  
+  elements.forEach(element => {
+    const href = element.href;
+    
+    if (!href || href === '#' || href === 'javascript:void(0)' || href.startsWith('javascript:')) {
+      // For non-href elements (buttons, JS handlers), use a different approach
+      const key = generateNonHrefKey(element);
+      if (!hrefMap.has(key)) {
+        hrefMap.set(key, element);
+      } else {
+        // Keep the one with better HTML source
+        const existing = hrefMap.get(key);
+        if (shouldReplace(existing, element)) {
+          hrefMap.set(key, element);
+        }
+      }
+    } else {
+      // For href elements, deduplicate by href
+      if (!hrefMap.has(href)) {
+        hrefMap.set(href, element);
+      } else {
+        // Keep the one with better HTML source
+        const existing = hrefMap.get(href);
+        if (shouldReplace(existing, element)) {
+          hrefMap.set(href, element);
+        }
+      }
+    }
+  });
+  
+  // Convert map back to array and reassign IDs
+  return Array.from(hrefMap.values()).map((element, index) => ({
+    ...element,
+    id: index,
+    originalId: element.id // Keep track of original ID
+  }));
+}
+
+// Generate a key for non-href elements (buttons, JS handlers)
+function generateNonHrefKey(element) {
+  // Use a combination of tag, text, and position to identify similar elements
+  const tag = element.tag || 'unknown';
+  const text = (element.text || '').trim().substring(0, 50); // First 50 chars
+  const hasJs = element.hasJsHandlers || element.hasJsHref;
+  
+  // For elements in Shadow DOM, include shadow host info
+  if (element.inShadowDom && element.shadowHost) {
+    return `${tag}:${text}:${element.shadowHost}:${hasJs}`;
+  }
+  
+  return `${tag}:${text}:${hasJs}`;
+}
+
+// Determine if we should replace the existing element with the new one
+function shouldReplace(existing, newElement) {
+  // Priority order (higher number = higher priority):
+  // 1. Shadow DOM Content (highest priority)
+  // 2. JavaScript Handler Context
+  // 3. Positioning Context  
+  // 4. Pseudo-Element Context
+  // 5. Element HTML (lowest priority)
+  
+  const getPriority = (element) => {
+    if (!element.relevantHtml) return 0;
+    
+    switch (element.relevantHtml.reason) {
+      case 'Shadow DOM Content': return 5;
+      case 'JavaScript Handler Context': return 4;
+      case 'JavaScript Handler Parent': return 3;
+      case 'Positioning Context': return 2;
+      case 'Pseudo-Element Context': return 1;
+      case 'Element HTML': return 0;
+      default: return 0;
+    }
+  };
+  
+  const existingPriority = getPriority(existing);
+  const newPriority = getPriority(newElement);
+  
+  // Replace if new element has higher priority
+  if (newPriority > existingPriority) {
+    return true;
+  }
+  
+  // If same priority, prefer the one with more text content
+  if (newPriority === existingPriority) {
+    const existingTextLength = (existing.text || '').length;
+    const newTextLength = (newElement.text || '').length;
+    return newTextLength > existingTextLength;
+  }
+  
+  return false;
+}
+
+// Message listener with size management
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'collect') {
+    try {
+      // First collect all elements (before deduplication)
+      const allElements = findInteractiveElements();
+      console.log(`Found ${allElements.length} interactive elements`);
+      
+      // Analyze all elements
+      const analyzedElements = allElements.map((element, index) => {
+        try {
+          if (!isValidElement(element)) {
+            console.warn('Skipping invalid element at index', index, element);
+            return null;
+          }
+          return analyzeElement(element, index);
+        } catch (e) {
+          console.warn('Error analyzing element:', e, element);
+          return {
+            id: index,
+            tag: element && element.tagName ? element.tagName.toLowerCase() : 'unknown',
+            text: 'Error analyzing element',
+            error: e.message
+          };
+        }
+      }).filter(Boolean);
+      
+      // Deduplicate elements
+      const deduplicatedElements = deduplicateElements(analyzedElements);
+      const duplicatesRemoved = analyzedElements.length - deduplicatedElements.length;
+      
+      console.log(`After deduplication: ${deduplicatedElements.length} unique elements (removed ${duplicatesRemoved} duplicates)`);
+      
+      // Prepare data for sending with size management
+      const preparedData = prepareDataForSending(deduplicatedElements);
+      
+      // Add deduplication information
+      if (duplicatesRemoved > 0) {
+        preparedData.deduplicationInfo = {
+          originalCount: analyzedElements.length,
+          uniqueCount: deduplicatedElements.length,
+          duplicatesRemoved: duplicatesRemoved
+        };
+      }
+      
+      console.log(`Sending ${preparedData.processedCount}/${preparedData.originalCount} elements (${preparedData.estimatedSize} bytes)`);
+      
+      if (preparedData.truncated) {
+        console.warn('Data was truncated due to size constraints');
+      }
+      
+      sendResponse(preparedData);
+    } catch (e) {
+      console.error('Error in message handler:', e);
+      sendResponse({ 
+        elements: [], 
+        error: e.message,
+        truncated: false,
+        originalCount: 0,
+        processedCount: 0
+      });
+    }
+  }
+});
+
+// Initialize and handle dynamic content
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Content script loaded');
+});
+
+// Handle dynamic content changes
+const observer = new MutationObserver((mutations) => {
+  // Debounce the collection to avoid excessive calls
+  clearTimeout(window.linkCollectionTimeout);
+  window.linkCollectionTimeout = setTimeout(() => {
+    // Notify sidepanel of potential changes
+    chrome.runtime.sendMessage({ action: 'content-changed' });
+  }, 1000);
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  attributeFilter: ['href', 'onclick', 'role']
+});
+
+// Prepare data for sending with size management (simplified)
 function prepareDataForSending(elements) {
   if (!Array.isArray(elements)) return { elements: [], truncated: false };
   
+  const originalElementCount = elements.length;
   let processedElements = elements.slice(0, MAX_ELEMENTS);
   let truncated = elements.length > MAX_ELEMENTS;
   
@@ -123,14 +445,11 @@ function prepareDataForSending(elements) {
       truncated = true;
     }
     
-    // If still too large, remove comprehensive HTML
+    // If still too large, remove relevant HTML
     if (totalSize > MAX_MESSAGE_SIZE) {
       processedElements = processedElements.map(element => ({
         ...element,
-        comprehensiveHtml: null,
-        shadowHostHtml: null,
-        slotElement: null,
-        html: truncateHtml(element.html, 500) // Very short HTML
+        relevantHtml: null
       }));
       truncated = true;
     }
@@ -139,7 +458,7 @@ function prepareDataForSending(elements) {
   return {
     elements: processedElements,
     truncated: truncated,
-    originalCount: elements.length,
+    originalCount: originalElementCount,
     processedCount: processedElements.length,
     estimatedSize: getObjectSize({ elements: processedElements })
   };
@@ -287,262 +606,3 @@ function hasPseudoElementsWithAbsolute(element) {
     return { hasPseudo: false };
   }
 }
-
-// Get comprehensive HTML including all related elements
-function getComprehensiveHtml(element) {
-  if (!isValidElement(element)) return null;
-  
-  const result = {
-    baseHtml: element.outerHTML,
-    shadowDomHtml: null,
-    slotHtml: null,
-    webComponentHtml: null,
-    absolutePositionHtml: null,
-    pseudoElementHtml: null,
-    jsHandlerHtml: null,
-    fullContextHtml: null
-  };
-  
-  // Handle Shadow DOM
-  if (element.shadowRoot) {
-    try {
-      result.shadowDomHtml = element.shadowRoot.innerHTML;
-    } catch (e) {
-      console.warn('Error accessing shadow DOM:', e);
-    }
-  }
-  
-  // Handle slots in Shadow DOM
-  if (element.assignedSlot) {
-    result.slotHtml = element.assignedSlot.outerHTML;
-  }
-  
-  // Handle web components
-  if (element.tagName && element.tagName.includes('-')) {
-    result.webComponentHtml = element.outerHTML;
-  }
-  
-  // Handle absolute positioning
-  const computed = getComputedStyleSafe(element);
-  if (computed.position === 'absolute') {
-    const relativeParent = findNearestRelative(element);
-    if (relativeParent && isValidElement(relativeParent)) {
-      result.absolutePositionHtml = relativeParent.outerHTML;
-    }
-  }
-  
-  // Handle pseudo-elements
-  const pseudoInfo = hasPseudoElementsWithAbsolute(element);
-  if (pseudoInfo.hasPseudo) {
-    const relativeParent = findNearestRelative(element);
-    if (relativeParent && isValidElement(relativeParent)) {
-      result.pseudoElementHtml = relativeParent.outerHTML;
-    }
-  }
-  
-  // Handle JavaScript handlers
-  if (hasJavaScriptHandlers(element)) {
-    // Get the element and its immediate context
-    const parent = element.parentElement;
-    if (parent && isValidElement(parent)) {
-      result.jsHandlerHtml = parent.outerHTML;
-    } else {
-      result.jsHandlerHtml = element.outerHTML;
-    }
-  }
-  
-  // Get full context HTML (parent container)
-  try {
-    const contextParent = element.closest('section, article, div, main, aside, nav') || element.parentElement;
-    if (contextParent && contextParent !== document.body && isValidElement(contextParent)) {
-      result.fullContextHtml = contextParent.outerHTML;
-    }
-  } catch (e) {
-    console.warn('Error getting context parent:', e);
-  }
-  
-  return result;
-}
-
-// Enhanced element analysis
-function analyzeElement(element, index) {
-  if (!isValidElement(element)) {
-    console.warn('Invalid element passed to analyzeElement:', element);
-    return null;
-  }
-  
-  const computed = getComputedStyleSafe(element);
-  const pseudoInfo = hasPseudoElementsWithAbsolute(element);
-  const comprehensiveHtml = getComprehensiveHtml(element);
-  
-  // Check for Shadow DOM context
-  const rootNode = element.getRootNode();
-  const inShadowDom = rootNode instanceof ShadowRoot;
-  const shadowHost = inShadowDom ? rootNode.host : null;
-  
-  // Check for slot context
-  const inSlot = !!(element.assignedSlot || element.closest('slot'));
-  
-  // Check for web component context
-  let inWebComponent = false;
-  try {
-    const closestElement = element.closest('*');
-    inWebComponent = !!(closestElement && closestElement.tagName && closestElement.tagName.includes('-'));
-  } catch (e) {
-    // Fallback check
-    let parent = element.parentElement;
-    while (parent && parent !== document.body) {
-      if (isValidElement(parent) && parent.tagName && parent.tagName.includes('-')) {
-        inWebComponent = true;
-        break;
-      }
-      parent = parent.parentElement;
-    }
-  }
-  
-  // Analyze positioning
-  const hasAbsolutePosition = computed.position === 'absolute';
-  const hasFixedPosition = computed.position === 'fixed';
-  const hasRelativePosition = computed.position === 'relative';
-  
-  // Analyze JavaScript handlers
-  const hasJsHandlers = hasJavaScriptHandlers(element);
-  const href = element.getAttribute('href');
-  const hasJsHref = href && href.trim().toLowerCase().startsWith('javascript:');
-  
-  // Get text content safely
-  let textContent = '';
-  try {
-    textContent = (element.innerText || element.textContent || '').trim();
-  } catch (e) {
-    textContent = '';
-  }
-  
-  return {
-    id: index,
-    tag: element.tagName.toLowerCase(),
-    text: textContent,
-    href: href,
-    
-    // Basic HTML
-    html: element.outerHTML,
-    
-    // Comprehensive HTML collection
-    comprehensiveHtml: comprehensiveHtml,
-    
-    // Shadow DOM information
-    inShadowDom: inShadowDom,
-    shadowHost: shadowHost && isValidElement(shadowHost) ? shadowHost.tagName.toLowerCase() : null,
-    shadowHostHtml: shadowHost && isValidElement(shadowHost) ? shadowHost.outerHTML : null,
-    
-    // Slot information
-    inSlot: inSlot,
-    slotElement: element.assignedSlot && isValidElement(element.assignedSlot) ? element.assignedSlot.outerHTML : null,
-    
-    // Web component information
-    inWebComponent: inWebComponent,
-    isWebComponent: element.tagName.includes('-'),
-    
-    // CSS positioning information
-    hasAbsolutePosition: hasAbsolutePosition,
-    hasFixedPosition: hasFixedPosition,
-    hasRelativePosition: hasRelativePosition,
-    positioningContext: hasAbsolutePosition || hasFixedPosition ? findNearestRelative(element) : null,
-    
-    // Pseudo-element information
-    hasPseudoElements: pseudoInfo.hasPseudo,
-    pseudoElementInfo: pseudoInfo,
-    
-    // JavaScript handler information
-    hasJsHandlers: hasJsHandlers,
-    hasJsHref: hasJsHref,
-    
-    // CSS information
-    computedStyles: {
-      position: computed.position,
-      display: computed.display,
-      visibility: computed.visibility,
-      zIndex: computed.zIndex
-    }
-  };
-}
-
-// Main collection function
-function collectElements() {
-  try {
-    const elements = findInteractiveElements();
-    console.log(`Found ${elements.length} interactive elements`);
-    
-    return elements.map((element, index) => {
-      try {
-        // Additional safety check
-        if (!isValidElement(element)) {
-          console.warn('Skipping invalid element at index', index, element);
-          return null;
-        }
-        
-        return analyzeElement(element, index);
-      } catch (e) {
-        console.warn('Error analyzing element:', e, element);
-        return {
-          id: index,
-          tag: element && element.tagName ? element.tagName.toLowerCase() : 'unknown',
-          text: 'Error analyzing element',
-          error: e.message
-        };
-      }
-    }).filter(Boolean);
-  } catch (e) {
-    console.error('Error collecting elements:', e);
-    return [];
-  }
-}
-
-// Message listener with size management
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'collect') {
-    try {
-      const elements = collectElements();
-      const preparedData = prepareDataForSending(elements);
-      
-      console.log(`Sending ${preparedData.processedCount}/${preparedData.originalCount} elements (${preparedData.estimatedSize} bytes)`);
-      
-      if (preparedData.truncated) {
-        console.warn('Data was truncated due to size constraints');
-      }
-      
-      sendResponse(preparedData);
-    } catch (e) {
-      console.error('Error in message handler:', e);
-      sendResponse({ 
-        elements: [], 
-        error: e.message,
-        truncated: false,
-        originalCount: 0,
-        processedCount: 0
-      });
-    }
-  }
-});
-
-// Initialize and handle dynamic content
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('Content script loaded');
-});
-
-// Handle dynamic content changes
-const observer = new MutationObserver((mutations) => {
-  // Debounce the collection to avoid excessive calls
-  clearTimeout(window.linkCollectionTimeout);
-  window.linkCollectionTimeout = setTimeout(() => {
-    // Notify sidepanel of potential changes
-    chrome.runtime.sendMessage({ action: 'content-changed' });
-  }, 1000);
-});
-
-observer.observe(document.body, {
-  childList: true,
-  subtree: true,
-  attributes: true,
-  attributeFilter: ['href', 'onclick', 'role']
-});

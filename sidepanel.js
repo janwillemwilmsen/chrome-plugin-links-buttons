@@ -50,6 +50,26 @@ function renderResults(data) {
     list.appendChild(warningLi);
   }
   
+  // Show deduplication info if applicable
+  if (data.deduplicationInfo) {
+    const dedupLi = document.createElement('li');
+    dedupLi.style.backgroundColor = '#d1ecf1';
+    dedupLi.style.border = '1px solid #bee5eb';
+    dedupLi.style.borderRadius = '5px';
+    dedupLi.style.padding = '10px';
+    dedupLi.style.marginBottom = '10px';
+    dedupLi.style.color = '#0c5460';
+    
+    const dedupText = document.createElement('div');
+    dedupText.innerHTML = `
+      <strong>🔗 Deduplication Applied</strong><br>
+      Found ${data.deduplicationInfo.originalCount} elements, showing ${data.deduplicationInfo.uniqueCount} unique.<br>
+      Removed ${data.deduplicationInfo.duplicatesRemoved} duplicates (prioritized Shadow DOM content).<br>
+    `;
+    dedupLi.appendChild(dedupText);
+    list.appendChild(dedupLi);
+  }
+  
   (data.elements || []).forEach(item => {
     const li = document.createElement('li');
     li.style.marginBottom = '15px';
@@ -67,13 +87,18 @@ function renderResults(data) {
     if (item.inShadowDom) displayText += ' (Shadow DOM)';
     if (item.inSlot) displayText += ' (Slot)';
     
+    // Show if this element was deduplicated
+    if (item.originalId !== undefined && item.originalId !== item.id) {
+      displayText += ` [Deduplicated: was #${item.originalId}]`;
+    }
+    
     mainInfo.textContent = displayText;
     li.appendChild(mainInfo);
     
     // Create details section
     const details = document.createElement('details');
     const summary = document.createElement('summary');
-    summary.textContent = 'View All HTML & Details';
+    summary.textContent = 'View HTML & Details';
     summary.style.cursor = 'pointer';
     summary.style.color = '#0066cc';
     details.appendChild(summary);
@@ -87,9 +112,17 @@ function renderResults(data) {
     
     // Basic information
     sections.push(`<strong>Basic Info:</strong>`);
+    sections.push(`ID: ${item.id}${item.originalId !== undefined && item.originalId !== item.id ? ` (was ${item.originalId})` : ''}`);
     sections.push(`Tag: ${item.tag}`);
     sections.push(`Text: ${item.text || 'None'}`);
     sections.push(`Href: ${item.href || 'None'}`);
+    
+    // Show what type of HTML was captured and why
+    if (item.relevantHtml) {
+      sections.push(`<br><strong>HTML Source:</strong>`);
+      sections.push(`Type: ${item.relevantHtml.reason}`);
+      sections.push(`Description: ${item.relevantHtml.description}`);
+    }
     
     // CSS positioning info
     if (item.hasAbsolutePosition || item.hasFixedPosition || item.hasRelativePosition) {
@@ -140,53 +173,15 @@ function renderResults(data) {
     detailsContent.innerHTML = sections.join('<br>');
     details.appendChild(detailsContent);
     
-    // Add HTML sections
-    if (item.comprehensiveHtml) {
-      const htmlSections = [];
-      
-      // Base HTML
-      if (item.comprehensiveHtml.baseHtml) {
-        htmlSections.push(createHtmlSection('Base HTML', item.comprehensiveHtml.baseHtml));
-      }
-      
-      // Shadow DOM HTML
-      if (item.comprehensiveHtml.shadowDomHtml) {
-        htmlSections.push(createHtmlSection('Shadow DOM HTML', item.comprehensiveHtml.shadowDomHtml));
-      }
-      
-      // Slot HTML
-      if (item.comprehensiveHtml.slotHtml) {
-        htmlSections.push(createHtmlSection('Slot HTML', item.comprehensiveHtml.slotHtml));
-      }
-      
-      // Web Component HTML
-      if (item.comprehensiveHtml.webComponentHtml) {
-        htmlSections.push(createHtmlSection('Web Component HTML', item.comprehensiveHtml.webComponentHtml));
-      }
-      
-      // Absolute Position HTML
-      if (item.comprehensiveHtml.absolutePositionHtml) {
-        htmlSections.push(createHtmlSection('Absolute Position Context HTML', item.comprehensiveHtml.absolutePositionHtml));
-      }
-      
-      // Pseudo Element HTML
-      if (item.comprehensiveHtml.pseudoElementHtml) {
-        htmlSections.push(createHtmlSection('Pseudo Element Context HTML', item.comprehensiveHtml.pseudoElementHtml));
-      }
-      
-      // JS Handler HTML
-      if (item.comprehensiveHtml.jsHandlerHtml) {
-        htmlSections.push(createHtmlSection('JavaScript Handler HTML', item.comprehensiveHtml.jsHandlerHtml));
-      }
-      
-      // Full Context HTML
-      if (item.comprehensiveHtml.fullContextHtml) {
-        htmlSections.push(createHtmlSection('Full Context HTML', item.comprehensiveHtml.fullContextHtml));
-      }
-      
-      htmlSections.forEach(section => details.appendChild(section));
+    // Add the single relevant HTML section
+    if (item.relevantHtml && item.relevantHtml.html) {
+      const htmlSection = createHtmlSection(
+        `Relevant HTML (${item.relevantHtml.reason})`, 
+        item.relevantHtml.html
+      );
+      details.appendChild(htmlSection);
     } else if (data.truncated) {
-      // Show message if comprehensive HTML was removed due to size limits
+      // Show message if HTML was removed due to size limits
       const noHtmlMessage = document.createElement('div');
       noHtmlMessage.style.marginTop = '10px';
       noHtmlMessage.style.padding = '8px';
@@ -195,7 +190,7 @@ function renderResults(data) {
       noHtmlMessage.style.borderRadius = '3px';
       noHtmlMessage.style.fontSize = '12px';
       noHtmlMessage.style.color = '#6c757d';
-      noHtmlMessage.textContent = 'Comprehensive HTML removed due to size constraints. Basic HTML may still be available.';
+      noHtmlMessage.textContent = 'HTML removed due to size constraints.';
       details.appendChild(noHtmlMessage);
     }
     
@@ -206,13 +201,11 @@ function renderResults(data) {
       if (e.target.tagName !== 'SUMMARY') {
         console.log('=== ELEMENT ANALYSIS ===');
         console.log('Element:', item);
-        if (item.comprehensiveHtml) {
-          console.log('=== COMPREHENSIVE HTML ===');
-          Object.entries(item.comprehensiveHtml).forEach(([key, value]) => {
-            if (value) {
-              console.log(`${key}:`, value);
-            }
-          });
+        if (item.relevantHtml) {
+          console.log('=== RELEVANT HTML ===');
+          console.log(`Type: ${item.relevantHtml.reason}`);
+          console.log(`Description: ${item.relevantHtml.description}`);
+          console.log('HTML:', item.relevantHtml.html);
         }
       }
     });
@@ -226,6 +219,11 @@ function renderResults(data) {
   let countText = `Items found: ${count}`;
   if (data.truncated && totalCount > count) {
     countText += ` (${totalCount} total, showing ${count})`;
+  }
+  
+  // Add deduplication info to count text
+  if (data.deduplicationInfo && data.deduplicationInfo.duplicatesRemoved > 0) {
+    countText += ` • ${data.deduplicationInfo.duplicatesRemoved} duplicates removed`;
   }
   
   document.getElementById('counts').textContent = countText;
