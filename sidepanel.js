@@ -20,23 +20,259 @@ function fetchFaqs() {
 function renderResults(data) {
   const list = document.getElementById('resultList');
   list.innerHTML = '';
+  
+  if (data.error) {
+    const errorLi = document.createElement('li');
+    errorLi.textContent = `Error: ${data.error}`;
+    errorLi.style.color = 'red';
+    list.appendChild(errorLi);
+    return;
+  }
+  
+  // Show truncation warning if data was truncated
+  if (data.truncated) {
+    const warningLi = document.createElement('li');
+    warningLi.style.backgroundColor = '#fff3cd';
+    warningLi.style.border = '1px solid #ffeaa7';
+    warningLi.style.borderRadius = '5px';
+    warningLi.style.padding = '10px';
+    warningLi.style.marginBottom = '10px';
+    warningLi.style.color = '#856404';
+    
+    const warningText = document.createElement('div');
+    warningText.innerHTML = `
+      <strong>⚠️ Data Truncated</strong><br>
+      Showing ${data.processedCount || 0} of ${data.originalCount || 0} elements.<br>
+      Some HTML content may be shortened due to size limits.<br>
+      <small>Estimated size: ${Math.round((data.estimatedSize || 0) / 1024)} KB</small>
+    `;
+    warningLi.appendChild(warningText);
+    list.appendChild(warningLi);
+  }
+  
   (data.elements || []).forEach(item => {
     const li = document.createElement('li');
-    li.textContent = `[${item.tag}] ${item.text || item.href || ''}`;
-    if (item.html) {
-      li.addEventListener('click', () => {
-        console.log('Element HTML:', item.html);
-        if (item.absoluteHtml) console.log('Absolute HTML:', item.absoluteHtml);
-        if (item.pseudoHtml) console.log('Pseudo HTML:', item.pseudoHtml);
-        if (item.jsHandlerHtml) console.log('JS Handler HTML:', item.jsHandlerHtml);
-      });
+    li.style.marginBottom = '15px';
+    li.style.padding = '10px';
+    li.style.border = '1px solid #ddd';
+    li.style.borderRadius = '5px';
+    
+    // Create main element info
+    const mainInfo = document.createElement('div');
+    mainInfo.style.fontWeight = 'bold';
+    mainInfo.style.marginBottom = '8px';
+    
+    let displayText = `[${item.tag}] ${item.text || item.href || 'No text'}`;
+    if (item.isWebComponent) displayText += ' (Web Component)';
+    if (item.inShadowDom) displayText += ' (Shadow DOM)';
+    if (item.inSlot) displayText += ' (Slot)';
+    
+    mainInfo.textContent = displayText;
+    li.appendChild(mainInfo);
+    
+    // Create details section
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'View All HTML & Details';
+    summary.style.cursor = 'pointer';
+    summary.style.color = '#0066cc';
+    details.appendChild(summary);
+    
+    const detailsContent = document.createElement('div');
+    detailsContent.style.marginTop = '10px';
+    detailsContent.style.fontSize = '12px';
+    
+    // Add comprehensive information
+    const sections = [];
+    
+    // Basic information
+    sections.push(`<strong>Basic Info:</strong>`);
+    sections.push(`Tag: ${item.tag}`);
+    sections.push(`Text: ${item.text || 'None'}`);
+    sections.push(`Href: ${item.href || 'None'}`);
+    
+    // CSS positioning info
+    if (item.hasAbsolutePosition || item.hasFixedPosition || item.hasRelativePosition) {
+      sections.push(`<br><strong>CSS Positioning:</strong>`);
+      sections.push(`Position: ${item.computedStyles?.position || 'static'}`);
+      sections.push(`Has Absolute: ${item.hasAbsolutePosition}`);
+      sections.push(`Has Fixed: ${item.hasFixedPosition}`);
+      sections.push(`Has Relative: ${item.hasRelativePosition}`);
     }
+    
+    // Pseudo-element info
+    if (item.hasPseudoElements) {
+      sections.push(`<br><strong>Pseudo Elements:</strong>`);
+      sections.push(`Has Pseudo: ${item.hasPseudoElements}`);
+      if (item.pseudoElementInfo) {
+        sections.push(`Before Absolute: ${item.pseudoElementInfo.beforeAbsolute}`);
+        sections.push(`After Absolute: ${item.pseudoElementInfo.afterAbsolute}`);
+      }
+    }
+    
+    // JavaScript handler info
+    if (item.hasJsHandlers || item.hasJsHref) {
+      sections.push(`<br><strong>JavaScript Handlers:</strong>`);
+      sections.push(`Has JS Handlers: ${item.hasJsHandlers}`);
+      sections.push(`Has JS Href: ${item.hasJsHref}`);
+    }
+    
+    // Shadow DOM info
+    if (item.inShadowDom) {
+      sections.push(`<br><strong>Shadow DOM:</strong>`);
+      sections.push(`In Shadow DOM: ${item.inShadowDom}`);
+      sections.push(`Shadow Host: ${item.shadowHost || 'Unknown'}`);
+    }
+    
+    // Web component info
+    if (item.inWebComponent || item.isWebComponent) {
+      sections.push(`<br><strong>Web Components:</strong>`);
+      sections.push(`In Web Component: ${item.inWebComponent}`);
+      sections.push(`Is Web Component: ${item.isWebComponent}`);
+    }
+    
+    // Slot info
+    if (item.inSlot) {
+      sections.push(`<br><strong>Slots:</strong>`);
+      sections.push(`In Slot: ${item.inSlot}`);
+    }
+    
+    detailsContent.innerHTML = sections.join('<br>');
+    details.appendChild(detailsContent);
+    
+    // Add HTML sections
+    if (item.comprehensiveHtml) {
+      const htmlSections = [];
+      
+      // Base HTML
+      if (item.comprehensiveHtml.baseHtml) {
+        htmlSections.push(createHtmlSection('Base HTML', item.comprehensiveHtml.baseHtml));
+      }
+      
+      // Shadow DOM HTML
+      if (item.comprehensiveHtml.shadowDomHtml) {
+        htmlSections.push(createHtmlSection('Shadow DOM HTML', item.comprehensiveHtml.shadowDomHtml));
+      }
+      
+      // Slot HTML
+      if (item.comprehensiveHtml.slotHtml) {
+        htmlSections.push(createHtmlSection('Slot HTML', item.comprehensiveHtml.slotHtml));
+      }
+      
+      // Web Component HTML
+      if (item.comprehensiveHtml.webComponentHtml) {
+        htmlSections.push(createHtmlSection('Web Component HTML', item.comprehensiveHtml.webComponentHtml));
+      }
+      
+      // Absolute Position HTML
+      if (item.comprehensiveHtml.absolutePositionHtml) {
+        htmlSections.push(createHtmlSection('Absolute Position Context HTML', item.comprehensiveHtml.absolutePositionHtml));
+      }
+      
+      // Pseudo Element HTML
+      if (item.comprehensiveHtml.pseudoElementHtml) {
+        htmlSections.push(createHtmlSection('Pseudo Element Context HTML', item.comprehensiveHtml.pseudoElementHtml));
+      }
+      
+      // JS Handler HTML
+      if (item.comprehensiveHtml.jsHandlerHtml) {
+        htmlSections.push(createHtmlSection('JavaScript Handler HTML', item.comprehensiveHtml.jsHandlerHtml));
+      }
+      
+      // Full Context HTML
+      if (item.comprehensiveHtml.fullContextHtml) {
+        htmlSections.push(createHtmlSection('Full Context HTML', item.comprehensiveHtml.fullContextHtml));
+      }
+      
+      htmlSections.forEach(section => details.appendChild(section));
+    } else if (data.truncated) {
+      // Show message if comprehensive HTML was removed due to size limits
+      const noHtmlMessage = document.createElement('div');
+      noHtmlMessage.style.marginTop = '10px';
+      noHtmlMessage.style.padding = '8px';
+      noHtmlMessage.style.backgroundColor = '#f8f9fa';
+      noHtmlMessage.style.border = '1px solid #dee2e6';
+      noHtmlMessage.style.borderRadius = '3px';
+      noHtmlMessage.style.fontSize = '12px';
+      noHtmlMessage.style.color = '#6c757d';
+      noHtmlMessage.textContent = 'Comprehensive HTML removed due to size constraints. Basic HTML may still be available.';
+      details.appendChild(noHtmlMessage);
+    }
+    
+    li.appendChild(details);
+    
+    // Add click handler for console logging
+    li.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'SUMMARY') {
+        console.log('=== ELEMENT ANALYSIS ===');
+        console.log('Element:', item);
+        if (item.comprehensiveHtml) {
+          console.log('=== COMPREHENSIVE HTML ===');
+          Object.entries(item.comprehensiveHtml).forEach(([key, value]) => {
+            if (value) {
+              console.log(`${key}:`, value);
+            }
+          });
+        }
+      }
+    });
+    
     list.appendChild(li);
   });
+  
   const count = Array.isArray(data.elements) ? data.elements.length : 0;
-  document.getElementById('counts').textContent = `Items found: ${count}`;
+  const totalCount = data.originalCount || count;
+  
+  let countText = `Items found: ${count}`;
+  if (data.truncated && totalCount > count) {
+    countText += ` (${totalCount} total, showing ${count})`;
+  }
+  
+  document.getElementById('counts').textContent = countText;
 }
 
+function createHtmlSection(title, html) {
+  const section = document.createElement('details');
+  section.style.marginTop = '10px';
+  
+  const summary = document.createElement('summary');
+  summary.textContent = title;
+  summary.style.cursor = 'pointer';
+  summary.style.color = '#0066cc';
+  summary.style.fontWeight = 'bold';
+  section.appendChild(summary);
+  
+  const content = document.createElement('pre');
+  content.style.background = '#f5f5f5';
+  content.style.padding = '10px';
+  content.style.borderRadius = '3px';
+  content.style.fontSize = '11px';
+  content.style.overflow = 'auto';
+  content.style.maxHeight = '200px';
+  content.style.whiteSpace = 'pre-wrap';
+  content.style.wordBreak = 'break-all';
+  
+  // Format HTML for better readability
+  try {
+    content.textContent = formatHtml(html);
+  } catch (e) {
+    content.textContent = html;
+  }
+  
+  section.appendChild(content);
+  return section;
+}
+
+function formatHtml(html) {
+  // Simple HTML formatting
+  return html
+    .replace(/></g, '>\n<')
+    .replace(/^\s+|\s+$/g, '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .join('\n');
+}
 
 function showLoading() {
   document.getElementById('counts').textContent = 'Loading...';

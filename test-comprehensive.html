@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comprehensive Link & Button Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+    }
+    
+    .test-section h2 {
+      color: #333;
+      border-bottom: 2px solid #007acc;
+      padding-bottom: 10px;
+    }
+    
+    /* CSS Positioning Tests */
+    .relative-container {
+      position: relative;
+      background: #f0f8ff;
+      padding: 20px;
+      margin: 10px 0;
+      border: 1px solid #007acc;
+    }
+    
+    .absolute-link {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ff6b6b;
+      color: white;
+      padding: 5px 10px;
+      text-decoration: none;
+      border-radius: 3px;
+    }
+    
+    .fixed-button {
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      background: #4ecdc4;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    
+    /* Pseudo-element Tests */
+    .pseudo-link::before {
+      content: "→ ";
+      position: absolute;
+      left: -20px;
+      color: #007acc;
+      font-weight: bold;
+    }
+    
+    .pseudo-button::after {
+      content: " ✓";
+      position: absolute;
+      right: -20px;
+      color: #28a745;
+      font-weight: bold;
+    }
+    
+    .pseudo-absolute::before {
+      content: "ABS";
+      position: absolute;
+      top: -15px;
+      left: 0;
+      background: #ffc107;
+      padding: 2px 5px;
+      font-size: 10px;
+      border-radius: 3px;
+    }
+    
+    /* Web Component Styles */
+    custom-link {
+      display: inline-block;
+      background: #e9ecef;
+      padding: 8px 12px;
+      border-radius: 4px;
+      text-decoration: none;
+      color: #495057;
+      border: 1px solid #ced4da;
+    }
+    
+    custom-button {
+      display: inline-block;
+      background: #6f42c1;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+    
+    /* Shadow DOM host styles */
+    .shadow-host {
+      background: #fff3cd;
+      padding: 15px;
+      border: 1px solid #ffeaa7;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+</head>
+<body>
+  <h1>Comprehensive Link & Button Test</h1>
+  <p>This page tests all scenarios for comprehensive HTML collection including Shadow DOM, web components, CSS positioning, pseudo-elements, and JavaScript handlers.</p>
+
+
+
+  <div id="test-section">
+    <h2>Test Section</h2>
+    <p>Bootstrap Card with stretched link.</p>
+    <div class="card" style="width: 18rem;">
+      <img src="https://placehold.co/600x400" class="card-img-top" alt="...">
+      <div class="card-body">
+        <h5 class="card-title">Card with stretched link</h5>
+        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+        <a href="#" class="btn btn-primary stretched-link">Go somewhere</a>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Basic Links and Buttons -->
+  <div class="test-section">
+    <h2>1. Basic Links and Buttons</h2>
+    <a href="#basic">Basic Link</a> |
+    <button>Basic Button</button> |
+    <a href="javascript:alert('JS Link')">JavaScript Link</a> |
+    <button onclick="alert('Clicked!')">Button with onclick</button>
+  </div>
+
+  <!-- CSS Positioning Tests -->
+  <div class="test-section">
+    <h2>2. CSS Positioning Tests</h2>
+    
+    <div class="relative-container">
+      <p>This container has position: relative</p>
+      <a href="#absolute" class="absolute-link">Absolute Positioned Link</a>
+    </div>
+    
+    <div class="relative-container">
+      <p>Another relative container</p>
+      <button class="absolute-link" onclick="alert('Absolute button')">Absolute Button</button>
+    </div>
+    
+    <button class="fixed-button">Fixed Position Button</button>
+  </div>
+
+  <!-- Pseudo-element Tests -->
+  <div class="test-section">
+    <h2>3. Pseudo-element Tests</h2>
+    
+    <div class="relative-container">
+      <a href="#pseudo" class="pseudo-link">Link with ::before pseudo</a><br><br>
+      <button class="pseudo-button">Button with ::after pseudo</button><br><br>
+      <a href="#pseudo-abs" class="pseudo-absolute">Link with absolute pseudo</a>
+    </div>
+  </div>
+
+  <!-- JavaScript Handler Tests -->
+  <div class="test-section">
+    <h2>4. JavaScript Handler Tests</h2>
+    
+    <a href="javascript:void(0)" onclick="console.log('JS Link clicked')">JavaScript void link</a><br>
+    <button onmousedown="console.log('Mouse down')" onmouseup="console.log('Mouse up')">Multi-event button</button><br>
+    <div onclick="alert('Clickable div')" role="button" style="display: inline-block; padding: 8px; background: #e9ecef; cursor: pointer;">Clickable div with role</div>
+  </div>
+
+  <!-- Web Components -->
+  <div class="test-section">
+    <h2>5. Web Components</h2>
+    <custom-link href="#custom">Custom Link Component</custom-link><br><br>
+    <custom-button>Custom Button Component</custom-button>
+  </div>
+
+  <!-- Shadow DOM Tests -->
+  <div class="test-section">
+    <h2>6. Shadow DOM Tests</h2>
+    <div id="shadow-host-1" class="shadow-host">Shadow Host 1 (will contain shadow links)</div>
+    <div id="shadow-host-2" class="shadow-host">Shadow Host 2 (will contain shadow buttons)</div>
+    <div id="shadow-host-nested" class="shadow-host">Nested Shadow Host</div>
+  </div>
+
+  <!-- Slot Tests -->
+  <div class="test-section">
+    <h2>7. Slot Tests</h2>
+    <slot-component id="slot-test">
+      <a href="#slotted" slot="link">Slotted Link</a>
+      <button slot="button">Slotted Button</button>
+    </slot-component>
+  </div>
+
+  <!-- Complex Combinations -->
+  <div class="test-section">
+    <h2>8. Complex Combinations</h2>
+    
+    <div class="relative-container">
+      <custom-complex-element id="complex-test">
+        <a href="javascript:complexAction()" class="pseudo-absolute" onclick="return false;">
+          Complex Link (JS + Pseudo + Custom Element)
+        </a>
+      </custom-complex-element>
+    </div>
+  </div>
+
+  <script>
+    // Define custom web components
+    class CustomLink extends HTMLElement {
+      connectedCallback() {
+        const href = this.getAttribute('href') || '#';
+        this.innerHTML = `<a href="${href}" style="color: inherit; text-decoration: none;">${this.textContent}</a>`;
+        this.addEventListener('click', () => console.log('Custom link clicked'));
+      }
+    }
+    
+    class CustomButton extends HTMLElement {
+      connectedCallback() {
+        this.style.cursor = 'pointer';
+        this.addEventListener('click', () => alert('Custom button clicked!'));
+      }
+    }
+    
+    class SlotComponent extends HTMLElement {
+      connectedCallback() {
+        const shadow = this.attachShadow({mode: 'open'});
+        shadow.innerHTML = `
+          <style>
+            :host { display: block; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; }
+            slot[name="link"] { color: #007bff; }
+            slot[name="button"] { background: #28a745; color: white; padding: 5px 10px; }
+          </style>
+          <p>Slot Component Content:</p>
+          <slot name="link"></slot> | 
+          <slot name="button"></slot>
+        `;
+      }
+    }
+    
+    class CustomComplexElement extends HTMLElement {
+      connectedCallback() {
+        const shadow = this.attachShadow({mode: 'open'});
+        shadow.innerHTML = `
+          <style>
+            :host { display: block; position: relative; }
+            .wrapper { background: #e3f2fd; padding: 10px; border-radius: 5px; }
+            .wrapper::before { content: "COMPLEX"; position: absolute; top: -10px; left: 5px; background: #2196f3; color: white; padding: 2px 5px; font-size: 10px; }
+          </style>
+          <div class="wrapper">
+            <slot></slot>
+          </div>
+        `;
+      }
+    }
+    
+    // Register custom elements
+    customElements.define('custom-link', CustomLink);
+    customElements.define('custom-button', CustomButton);
+    customElements.define('slot-component', SlotComponent);
+    customElements.define('custom-complex-element', CustomComplexElement);
+    
+    // Create Shadow DOM content
+    function createShadowContent() {
+      // Shadow Host 1 - Links
+      const host1 = document.getElementById('shadow-host-1');
+      const shadow1 = host1.attachShadow({mode: 'open'});
+      shadow1.innerHTML = `
+        <style>
+          a { color: #dc3545; text-decoration: none; padding: 5px; }
+          .shadow-link { background: #f8d7da; border-radius: 3px; }
+        </style>
+        <p>Shadow DOM Links:</p>
+        <a href="#shadow1" class="shadow-link">Shadow Link 1</a> |
+        <a href="javascript:alert('Shadow JS')" class="shadow-link">Shadow JS Link</a>
+      `;
+      
+      // Shadow Host 2 - Buttons
+      const host2 = document.getElementById('shadow-host-2');
+      const shadow2 = host2.attachShadow({mode: 'open'});
+      shadow2.innerHTML = `
+        <style>
+          button { background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 4px; margin: 2px; }
+          .special::after { content: " ★"; }
+        </style>
+        <p>Shadow DOM Buttons:</p>
+        <button onclick="alert('Shadow button!')">Shadow Button</button>
+        <button class="special">Special Shadow Button</button>
+      `;
+      
+      // Nested Shadow DOM
+      const hostNested = document.getElementById('shadow-host-nested');
+      const shadowNested = hostNested.attachShadow({mode: 'open'});
+      const nestedDiv = document.createElement('div');
+      nestedDiv.innerHTML = '<p>Nested Shadow Host</p>';
+      shadowNested.appendChild(nestedDiv);
+      
+      const nestedShadow = nestedDiv.attachShadow({mode: 'open'});
+      nestedShadow.innerHTML = `
+        <style>
+          a, button { background: #6f42c1; color: white; padding: 5px 10px; margin: 2px; text-decoration: none; border: none; border-radius: 3px; }
+        </style>
+        <a href="#nested">Nested Shadow Link</a>
+        <button onclick="alert('Nested shadow!')">Nested Shadow Button</button>
+      `;
+    }
+    
+    // Complex action function
+    function complexAction() {
+      console.log('Complex action triggered!');
+      alert('This is a complex element with multiple features!');
+    }
+    
+    // Initialize shadow DOM when page loads
+    document.addEventListener('DOMContentLoaded', createShadowContent);
+    
+    // Add dynamic event listeners
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('custom-link, custom-button')) {
+        console.log('Custom element clicked:', e.target.tagName);
+      }
+    });
+  </script>
+</body>
+</html> 
